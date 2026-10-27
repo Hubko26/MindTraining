@@ -1,0 +1,2 @@
+# MindTraining
+Trening Mysle
