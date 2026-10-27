@@ -1,0 +1,13 @@
+{
+  "name": "mind-training",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tréning mysle pre dospelých – počty z hlavy, pamäť, pozornosť. Čisté HTML/JS, bez buildu.",
+  "scripts": {
+    "test": "node --test",
+    "bump": "python tools/bump-version.py"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

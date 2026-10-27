@@ -1,0 +1,13 @@
+.sheet { display: flex; flex-direction: column; gap: 6px; width: min(100%, 460px); }
+.brain .row {
+  display: flex; align-items: center; gap: 12px; text-align: left; padding: 10px 14px;
+  font-size: 1.15rem; font-variant-numeric: tabular-nums; border-radius: 10px;
+}
+.row .k { font-size: .75rem; color: #9aa8ba; width: 1em; }
+.row .eq { flex: 1; }
+.row .mk { font-size: .95rem; font-weight: 600; color: #2b8a3e; }
+.brain .row.marked { background: #fff3bf; box-shadow: 0 2px 0 #d9b800; }
+.brain .row.marked .eq { text-decoration: line-through; text-decoration-color: #e03131; }
+.brain .row.found { background: #d3f9d8; }
+.brain .row.missed { background: #ffc9c9; }
+.brain .row.fa { background: #ffe8cc; }

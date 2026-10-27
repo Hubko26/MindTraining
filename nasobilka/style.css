@@ -1,0 +1,11 @@
+.heat { display: grid; gap: 2px; width: min(100%, 380px); margin: 10px auto 4px; }
+.heat i, .legend i { display: block; aspect-ratio: 1; border-radius: 2px; }
+.legend { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.legend i { width: 12px; display: inline-block; }
+.b0 { background: #e3e9f2; }
+.b1 { background: #ffb3b3; }
+.b2 { background: #ffd8a0; }
+.b3 { background: #fff09a; }
+.b4 { background: #b9e8b9; }
+.b5 { background: #6cc46c; }
+.lines li:last-child { list-style: none; margin-left: -20px; }

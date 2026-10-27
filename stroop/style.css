@@ -1,0 +1,9 @@
+.stroop { text-align: center; padding: 26px 16px; }
+.cue { font-size: .95rem; font-weight: 700; letter-spacing: .08em; color: #4a5b70; min-height: 1.3em; }
+.word { font-size: clamp(2.4rem, 11vw, 3.6rem); font-weight: 800; letter-spacing: .03em; margin-top: 6px; }
+.cbtns { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: min(100%, 420px); }
+.brain .cb { display: flex; align-items: center; gap: 10px; justify-content: center; font-size: 1.05rem; font-weight: 600; padding: 16px 8px; }
+.cb i { width: 18px; height: 18px; border-radius: 50%; display: inline-block; }
+.cb kbd { font-size: .75rem; opacity: .5; }
+.brain .cb.right { background: #b9f2c4; }
+.brain .cb.wrong { background: #ffc9c9; }

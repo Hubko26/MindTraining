@@ -1,0 +1,140 @@
+/* Spoločný vzhľad pre všetky hry. */
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: linear-gradient(180deg, #7ec8ff 0%, #dff3ff 100%);
+  color: #123;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+header {
+  padding: 10px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+h1 { font-size: 1.4rem; margin: 0; }
+.controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.levels { display: flex; gap: 6px; }
+button {
+  font-size: 1.1rem;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: #fff;
+  color: #123;
+  box-shadow: 0 2px 0 #9bc;
+  cursor: pointer;
+  font-family: inherit;
+}
+button:active { transform: translateY(2px); box-shadow: none; }
+.levels button { width: 44px; }
+.levels button.active { background: #ffd33d; font-weight: bold; }
+button.primary { background: #2f7cff; color: #fff; box-shadow: 0 2px 0 #1a4fb0; }
+button.danger { background: #ff6b6b; color: #fff; box-shadow: 0 2px 0 #b03a3a; }
+
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px 12px;
+}
+footer { text-align: center; padding: 8px; font-size: .85rem; color: #456; }
+footer a { color: #2f7cff; text-decoration: none; }
+
+.score { font-size: 1.1rem; color: #345; display: flex; gap: 14px; }
+.stars { letter-spacing: 2px; }
+
+/* Prekryvná výhra */
+.overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,.75);
+  border-radius: 12px;
+  z-index: 5;
+}
+.overlay.hidden { display: none; }
+.win-box {
+  background: #fff;
+  padding: 24px 32px;
+  border-radius: 16px;
+  text-align: center;
+  font-size: 1.3rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  animation: pop .4s ease-out;
+}
+.win-box .big { font-size: 2.2rem; margin-bottom: 8px; }
+.win-box .stats { margin: 10px 0; font-size: 1rem; color: #567; }
+@keyframes pop { from { transform: scale(.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}
+.shake { animation: shake .3s; }
+@keyframes bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+.bounce { animation: bounce .4s; }
+
+/* ---- kvízová kostra (shared/quiz.js) ---- */
+.prompt { font-size: 1.4rem; font-weight: 600; text-align: center; margin-top: 4px; }
+.area { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+.hint { font-size: 1rem; color: #567; min-height: 1.4em; text-align: center; }
+.options {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 14px; width: min(92vw, 560px);
+}
+.options.wide { grid-template-columns: repeat(2, 1fr); }
+.opt {
+  min-height: 110px; display: flex; align-items: center; justify-content: center;
+  font-size: clamp(3rem, 12vw, 4.5rem); background: #fff; border-radius: 20px;
+  box-shadow: 0 5px 0 #9bc; cursor: pointer; padding: 8px; text-align: center;
+}
+.opt.text { font-size: clamp(1.6rem, 6vw, 2.4rem); font-weight: bold; }
+.opt:active { transform: translateY(3px); box-shadow: none; }
+.opt.right { background: #b9f2c4; }
+.opt.wrong { background: #ffc9c9; }
+.opt.dim { opacity: .35; pointer-events: none; }
+.row-emoji {
+  display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+  background: #fff; border-radius: 18px; padding: 14px; box-shadow: 0 5px 0 #9bc;
+  width: min(95vw, 640px); font-size: clamp(2.4rem, 9vw, 3.6rem);
+}
+.row-emoji .it { width: 1.4em; height: 1.4em; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: #f3f7ff; }
+.slots, .pool { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.slot {
+  width: clamp(64px, 16vw, 96px); height: clamp(64px, 16vw, 96px); border-radius: 14px;
+  border: 3px dashed #9bc; background: #fff; display: flex; align-items: center; justify-content: center;
+  font-size: clamp(2rem, 8vw, 3.4rem);
+}
+.slot.filled { border-style: solid; border-color: #2f9e44; background: #e9fbee; }
+.pool .opt { min-height: 0; width: clamp(70px, 18vw, 100px); height: clamp(70px, 18vw, 100px); font-size: clamp(2.2rem, 9vw, 3.6rem); }
+.silhouette { filter: brightness(0); opacity: .85; }
+
+/* popisky pod emoji */
+.labeled { display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
+.labeled .lbl { font-size: .95rem; font-weight: 600; color: #345; margin-top: 4px; }
+.labeled .lbl.sm { font-size: .7rem; margin-top: 0; }
+.pool .opt .labeled .lbl, .slot .labeled .lbl { font-size: .75rem; }
+.row-emoji .it { height: auto; min-height: 1.4em; padding: 2px 4px; }
+.row-emoji .it .lbl { font-size: .3em; }
+
+/* prepínač jazyka – vpravo hore */
+.langsw { display: flex; gap: 4px; margin-left: auto; }
+.langsw button {
+  font-size: .85rem; font-weight: 700; padding: 5px 9px; border-radius: 8px;
+  background: rgba(255,255,255,.75); color: #456; box-shadow: 0 2px 0 #9bc; min-width: 38px;
+}
+.langsw button.active { background: #2f7cff; color: #fff; box-shadow: 0 2px 0 #1a4fb0; }
+header { position: relative; }

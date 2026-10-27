@@ -1,0 +1,8 @@
+.tricks { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; width: min(100%, 720px); }
+.brain .trick { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 10px; border-radius: 14px; }
+.trick .ico { font-size: 1.8rem; }
+.trick .t { font-weight: 600; font-size: 1rem; }
+.trick .b { font-size: .8rem; color: #2f6fe0; font-weight: 600; min-height: 1em; }
+.lt { margin: 0 0 8px; font-size: 1.3rem; }
+.lesson { font-size: 1.05rem; line-height: 1.8; }
+#hint { min-height: 1.6em; font-size: 1.05rem; color: #4a5b70; }

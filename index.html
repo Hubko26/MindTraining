@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tréning mysle</title>
+  <link rel="stylesheet" href="shared/brain.css?v=875eadba">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: linear-gradient(180deg, #e6edf7 0%, #f6f8fb 100%);
+      color: #1d2a3a;
+    }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px 40px; }
+    header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    header h1 { margin: 0; font-size: 2rem; }
+    a.back { color: #4a5b70; text-decoration: none; font-size: 14px; display: inline-block; margin-bottom: 8px; }
+    .sub { color: #4a5b70; margin: 6px 0 0; }
+    h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: .06em; color: #4a5b70; margin: 26px 0 10px; }
+    .games { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+    .game {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      background: #fff; border-radius: 16px; padding: 20px 14px;
+      text-decoration: none; color: inherit;
+      box-shadow: 0 2px 12px rgba(30, 50, 80, .08);
+      transition: transform .1s;
+    }
+    .game:active { transform: translateY(2px); }
+    .game .ico { font-size: 2.6rem; }
+    .game .t { font-size: 1.1rem; font-weight: 600; text-align: center; }
+    .game .d { font-size: .85rem; color: #5a6b80; text-align: center; }
+    .game .b { font-size: .8rem; color: #2f6fe0; font-weight: 600; min-height: 1em; }
+    .daily {
+      display: flex; align-items: center; gap: 16px; margin-top: 18px;
+      background: #2f6fe0; color: #fff; border-radius: 16px; padding: 18px 20px;
+      text-decoration: none; box-shadow: 0 4px 16px rgba(47, 111, 224, .3);
+    }
+    .daily .ico { font-size: 2.6rem; }
+    .daily .t { font-size: 1.25rem; font-weight: 700; }
+    .daily .d { opacity: .9; font-size: .95rem; }
+    .daily .streak { margin-left: auto; text-align: center; font-size: .85rem; }
+    .daily .streak b { display: block; font-size: 1.6rem; }
+    .langsw { display: flex; gap: 4px; margin-left: auto; }
+    .langsw button {
+      font-size: .85rem; font-weight: 700; padding: 5px 9px; border: 0; border-radius: 8px;
+      background: rgba(255,255,255,.85); color: #4a5b70; box-shadow: 0 2px 0 #c3cfdf; min-width: 38px; cursor: pointer;
+      font-family: inherit;
+    }
+    .langsw button.active { background: #2f6fe0; color: #fff; box-shadow: 0 2px 0 #1d4ea8; }
+  </style>
+</head>
+<body class="brain">
+  <div class="wrap">
+    <a class="back" href="/" id="back" hidden>← Rozcestník</a>
+    <header><h1 id="title">🧠 Tréning mysle</h1></header>
+    <p class="sub" id="sub"></p>
+    <a class="daily" href="trening/">
+      <span class="ico">🔥</span>
+      <span><span class="t" id="dailyT"></span><br><span class="d" id="dailyD"></span></span>
+      <span class="streak" id="streak"></span>
+    </a>
+    <h2 id="hMath">Matematika</h2>
+    <div class="games" id="math"></div>
+    <h2 id="hFocus">Presnosť a sústredenie</h2>
+    <div class="games" id="focus"></div>
+    <h2 id="hMind">Pamäť a pozornosť</h2>
+    <div class="games" id="mind"></div>
+  </div>
+
+  <script src="shared/i18n.js?v=a99f3957"></script>
+  <script src="shared/brain.js?v=7f67da41"></script>
+  <script>
+    // best = kľúč rekordu, ktorý sa ukáže na karte; lower = menej je lepšie (čas)
+    const GAMES = {
+      math: [
+        { href: "rychle/", ico: "⚡", best: "rychle.mix",
+          t: { sk: "Rýchle počty", cs: "Rychlé počty", en: "Speed arithmetic" },
+          d: { sk: "60 sekúnd, +−×÷, obtiažnosť sa prispôsobí", cs: "60 sekund, +−×÷, obtížnost se přizpůsobí", en: "60 seconds, +−×÷, adaptive difficulty" } },
+        { href: "retaz/", ico: "🔗", best: null,
+          t: { sk: "Reťazové počty", cs: "Řetězové počty", en: "Chain arithmetic" },
+          d: { sk: "Počítaj v hlave krok za krokom", cs: "Počítej v hlavě krok za krokem", en: "Keep a running total in your head" } },
+        { href: "odhad/", ico: "🎯", best: "odhad.all",
+          t: { sk: "Odhad", cs: "Odhad", en: "Estimation" },
+          d: { sk: "Približne a rýchlo: súčiny, percentá, kurz", cs: "Přibližně a rychle: součiny, procenta, kurz", en: "Quick and close: products, percentages, FX" } },
+        { href: "ciel/", ico: "🏁", best: null,
+          t: { sk: "Dosiahni cieľ", cs: "Dosáhni cíle", en: "Hit the target" },
+          d: { sk: "Z daných čísel poskladaj cieľové číslo", cs: "Z daných čísel slož cílové číslo", en: "Combine the numbers to reach the target" } },
+        { href: "triky/", ico: "🪄", best: null,
+          t: { sk: "Triky z hlavy", cs: "Triky z hlavy", en: "Mental math tricks" },
+          d: { sk: "×11, ×5, ×25, mocniny, percentá…", cs: "×11, ×5, ×25, mocniny, procenta…", en: "×11, ×5, ×25, squares, percentages…" } },
+        { href: "nasobilka/", ico: "✖️", best: null,
+          t: { sk: "Násobilka do 20", cs: "Násobilka do 20", en: "Times tables to 20" },
+          d: { sk: "Opakuje častejšie to, čo nevieš", cs: "Opakuje častěji to, co nevíš", en: "Repeats what you miss more often" } },
+        { href: "percenta/", ico: "％", best: "percenta",
+          t: { sk: "Percentá a úroky", cs: "Procenta a úroky", en: "Percentages & interest" },
+          d: { sk: "Zľavy, DPH, zmena v %, zložené úročenie", cs: "Slevy, DPH, změna v %, složené úročení", en: "Discounts, VAT, % change, compounding" } },
+      ],
+      focus: [
+        { href: "sart/", ico: "🛑", best: "sart.short", pct: true,
+          t: { sk: "Nestlač trojku", cs: "Nemačkej trojku", en: "Don't press 3" },
+          d: { sk: "Stláčaj stále, len pri 3 nie – chyby z autopilota", cs: "Mačkej pořád, jen u 3 ne – chyby z autopilota", en: "Press for every digit except 3 – autopilot errors" } },
+        { href: "kontrolor/", ico: "🔍", best: "kontrolor.mid", pct: true,
+          t: { sk: "Kontrolór", cs: "Kontrolor", en: "Checker" },
+          d: { sk: "Nájdi chyby v hotových výpočtoch", cs: "Najdi chyby v hotových výpočtech", en: "Spot mistakes in worked problems" } },
+        { href: "rychle/", ico: "🎯", best: "rychle.acc.mix", preset: "acc",
+          t: { sk: "Rýchle počty: presnosť", cs: "Rychlé počty: přesnost", en: "Arithmetic: accuracy" },
+          d: { sk: "Bez času, prvá chyba končí – najdlhšia séria", cs: "Bez času, první chyba končí – nejdelší série", en: "No clock, first mistake ends it – longest streak" } },
+      ],
+      mind: [
+        { href: "nback/", ico: "🔲", best: null,
+          t: { sk: "N-back", cs: "N-back", en: "N-back" },
+          d: { sk: "Pracovná pamäť: bolo to pred N krokmi?", cs: "Pracovní paměť: bylo to před N kroky?", en: "Working memory: was it N steps ago?" } },
+        { href: "cisla/", ico: "🔢", best: "cisla.fwd",
+          t: { sk: "Pamäť čísel", cs: "Paměť čísel", en: "Digit span" },
+          d: { sk: "Zapamätaj si rad číslic (aj odzadu)", cs: "Zapamatuj si řadu číslic (i pozpátku)", en: "Remember the digits (also backwards)" } },
+        { href: "schulte/", ico: "👁️", best: "schulte.5", lower: true,
+          t: { sk: "Schulteho tabuľka", cs: "Schulteho tabulka", en: "Schulte table" },
+          d: { sk: "Nájdi čísla po poradí čo najrýchlejšie", cs: "Najdi čísla popořadě co nejrychleji", en: "Find the numbers in order, fast" } },
+        { href: "stroop/", ico: "🎨", best: "stroop.ink",
+          t: { sk: "Stroop", cs: "Stroop", en: "Stroop" },
+          d: { sk: "Farba písma, nie slovo", cs: "Barva písma, ne slovo", en: "The ink colour, not the word" } },
+        { href: "kalkudoku/", ico: "🧮", best: "kalkudoku.4", lower: true,
+          t: { sk: "Kalkudoku", cs: "Kalkudoku", en: "Calcudoku" },
+          d: { sk: "Sudoku so súčtami a súčinmi", cs: "Sudoku se součty a součiny", en: "Sudoku with sums and products" } },
+      ],
+    };
+
+    const PAGE = {
+      title: { sk: "🧠 Tréning mysle", cs: "🧠 Trénink mysli", en: "🧠 Brain training" },
+      docTitle: { sk: "Tréning mysle", cs: "Trénink mysli", en: "Brain training" },
+      sub: { sk: "Krátke hry na počty z hlavy, pamäť a pozornosť. Výsledky sa ukladajú v tomto prehliadači.",
+             cs: "Krátké hry na počty z hlavy, paměť a pozornost. Výsledky se ukládají v tomto prohlížeči.",
+             en: "Short games for mental math, memory and attention. Results are stored in this browser." },
+      dailyT: { sk: "Denný tréning", cs: "Denní trénink", en: "Daily workout" },
+      dailyD: { sk: "3 hry, asi 5 minút – každý deň iný mix", cs: "3 hry, asi 5 minut – každý den jiný mix", en: "3 games, about 5 minutes – a new mix every day" },
+      days: { sk: "dní v rade", cs: "dní v řadě", en: "day streak" },
+      best: { sk: "Rekord:", cs: "Rekord:", en: "Best:" },
+      math: { sk: "Matematika", cs: "Matematika", en: "Maths" },
+      mind: { sk: "Pamäť a pozornosť", cs: "Paměť a pozornost", en: "Memory & attention" },
+      focus: { sk: "Presnosť a sústredenie", cs: "Přesnost a soustředění", en: "Accuracy & focus" },
+    };
+
+    // Počet dní v rade so splneným denným tréningom (dnešok sa ráta, keď je hotový).
+    function streak() {
+      const done = Brain.load("dailyDone", {});
+      const d = new Date();
+      if (!done[Brain.today(d)]) d.setDate(d.getDate() - 1);
+      let n = 0;
+      while (done[Brain.today(d)]) { n++; d.setDate(d.getDate() - 1); }
+      return n;
+    }
+
+    document.title = t(PAGE.docTitle);
+    document.getElementById("title").textContent = t(PAGE.title);
+    document.getElementById("sub").textContent = t(PAGE.sub);
+    document.getElementById("dailyT").textContent = t(PAGE.dailyT);
+    document.getElementById("dailyD").textContent = t(PAGE.dailyD);
+    document.getElementById("hMath").textContent = t(PAGE.math);
+    document.getElementById("hMind").textContent = t(PAGE.mind);
+    document.getElementById("hFocus").textContent = t(PAGE.focus);
+    document.getElementById("streak").innerHTML = `<b>${streak()}</b>${t(PAGE.days)}`;
+
+    for (const [section, list] of Object.entries(GAMES)) {
+      const box = document.getElementById(section);
+      for (const g of list) {
+        const b = g.best ? Brain.best(g.best) : null;
+        const a = document.createElement("a");
+        a.className = "game";
+        a.href = g.href;
+        // karta s predvoleným režimom (presnosť v Rýchlych počtoch) ho pred otvorením nastaví
+        if (g.preset) a.addEventListener("click", () => Brain.save("opt.rychle.style", g.preset));
+        else if (g.href === "rychle/") a.addEventListener("click", () => Brain.save("opt.rychle.style", "speed"));
+        a.innerHTML = `<span class="ico">${g.ico}</span>` +
+          `<span class="t">${t(g.t)}</span><span class="d">${t(g.d)}</span>` +
+          `<span class="b">${b === null ? "" : t(PAGE.best) + " " + (g.lower ? Brain.secs(b) : Brain.num(b) + (g.pct ? " %" : ""))}</span>`;
+        box.appendChild(a);
+      }
+    }
+
+    // Odkaz na domáci rozcestník len na lokálnom serveri.
+    if (location.hostname === "localhost" || /^\d+\.\d+\.\d+\.\d+$/.test(location.hostname)) {
+      document.getElementById("back").hidden = false;
+    }
+
+    // meno hráča je povinné; rekordy a séria na kartách sú jeho
+    Brain.ensureUser(document.querySelector("header"));
+    I18N.attach();
+  </script>
+</body>
+</html>

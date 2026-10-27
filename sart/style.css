@@ -1,0 +1,9 @@
+.brain .sart {
+  width: min(92vw, 420px); aspect-ratio: 4 / 3; border-radius: 18px; background: #fff;
+  box-shadow: 0 2px 12px rgba(30, 50, 80, .08); display: flex; align-items: center; justify-content: center;
+  font-weight: 700; color: #1d2a3a; padding: 0; transition: background .15s;
+}
+.brain .sart:active { transform: none; }
+.sart .mask { color: #c3cfdf; font-weight: 400; }
+.brain .sart.bad { background: #ffc9c9; }
+.brain .sart.miss { background: #fff3d6; }

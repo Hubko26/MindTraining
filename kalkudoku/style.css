@@ -1,0 +1,18 @@
+.kk { display: grid; width: min(92vw, 440px); background: #fff; border: 3px solid #1d2a3a; border-radius: 6px; overflow: hidden; }
+.cell {
+  position: relative; aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  border: 1px solid #d3dbe6; cursor: pointer;
+}
+.cell.bt { border-top: 3px solid #1d2a3a; }
+.cell.bb { border-bottom: 3px solid #1d2a3a; }
+.cell.bl { border-left: 3px solid #1d2a3a; }
+.cell.br { border-right: 3px solid #1d2a3a; }
+.cell.sel { background: #fff3bf; }
+.cell.cagebad { background: #fff0f0; }
+.cell .lbl { position: absolute; left: 4px; top: 2px; font-size: clamp(.65rem, 2.6vw, .85rem); font-weight: 700; color: #1d2a3a; }
+.cell .val { font-size: clamp(1.4rem, 7vw, 2.1rem); font-weight: 600; color: #2f6fe0; }
+.cell.bad .val { color: #e03131; }
+.cell .notes { position: absolute; bottom: 3px; left: 4px; right: 4px; font-size: clamp(.55rem, 2.2vw, .75rem); color: #6a7b90; text-align: center; }
+.kpad { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; width: min(92vw, 440px); }
+.kpad button { font-size: 1.4rem; min-width: 52px; padding: 10px 0; }
+.brain .kpad button.active { background: #ffd33d; }
