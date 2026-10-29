@@ -377,7 +377,7 @@ const Brain = (() => {
     const all = Object.entries(lb).sort((a, b) => (lower ? a[1] - b[1] : b[1] - a[1]));
     const mine = all.findIndex(([n]) => n === me);
     const del = n => (admin ? `<button type="button" class="del" data-n="${esc(n)}" title="${t(S.del)}">🗑</button>` : "");
-    const row = ([n, s], i) => `<li class="${n === me ? "me" : ""}"><span class="r">${i + 1}.</span><span class="n">${esc(n)}</span><b>${fmt(s)}</b>${del(n)}</li>`;
+    const row = ([n, s], i) => `<li class="${n === me ? "me" : ""}"><span class="r">${i + 1}.</span><span class="n" title="${esc(n)}">${esc(n)}</span><b>${fmt(s)}</b>${del(n)}</li>`;
     // aktuálne nastavenia hry (režim, obtiažnosť…) – aby bolo jasné, čoho sa tabuľka týka
     const mode = [...document.querySelectorAll("#controls .seg button.active")].map(b => b.textContent).join(" · ");
     el.innerHTML = `
