@@ -9,10 +9,15 @@
 //
 // Spoločná tabuľka online: keď je vyplnené CLOUD nižšie, výsledky sa zdieľajú cez
 // Firebase Firestore (kolekcia scores, dokument { g: kľúč hry, n: meno, s: výsledok, lower }).
+//   brain.lbq                   – výsledky čakajúce na odoslanie: { kľúč: { meno: výsledok } }
+//   brain.lbsynced              – hry, ktorých staré lokálne rekordy sa už nahrali (len raz)
+//   brain.admin                 – prihlásenie správcu (Firebase Auth token), smie mazať riadky
 const Brain = (() => {
   // Firebase projekt pre spoločnú tabuľku (verejné údaje z firebaseConfig, nie tajomstvo).
   // Prázdne = tabuľka len v tomto prehliadači. Nastavenie: README → Spoločná tabuľka.
-  const CLOUD = { projectId: "mindtraining-8a94a", apiKey: "AIzaSyDuF1cY5_CKn2cn7IwnK16itdI4KaZ5hGc" };
+  // admin = meno hráča, ktorému sa v tabuľke ukážu tlačidlá 🗑 (mazať smie len účet
+  // povolený v pravidlách Firestore, meno samo nič nechráni).
+  const CLOUD = { projectId: "mindtraining-8a94a", apiKey: "AIzaSyDuF1cY5_CKn2cn7IwnK16itdI4KaZ5hGc", admin: "Hubko" };
   const L = (sk, cs, en) => ({ sk, cs, en });
   const S = {
     start: L("Štart ▶", "Start ▶", "Start ▶"),
@@ -42,6 +47,15 @@ const Brain = (() => {
     nameReq: L("Zadaj meno.", "Zadej jméno.", "Please enter a name."),
     play: L("Hrať ▶", "Hrát ▶", "Play ▶"),
     cancel: L("Zrušiť", "Zrušit", "Cancel"),
+    del: L("Zmazať výsledok", "Smazat výsledek", "Delete result"),
+    delAsk: L("Zmazať z tabuľky výsledok hráča", "Smazat z tabulky výsledek hráče", "Delete the leaderboard result of"),
+    delFail: L("⚠️ Mazanie sa nepodarilo", "⚠️ Smazání se nepodařilo", "⚠️ Delete failed"),
+    adminTitle: L("🔑 Prihlásenie správcu", "🔑 Přihlášení správce", "🔑 Admin sign-in"),
+    adminWhy: L("Mazať výsledky smie len správca. Prihlásenie sa zapamätá v tomto prehliadači.", "Mazat výsledky smí jen správce. Přihlášení se zapamatuje v tomto prohlížeči.", "Only the admin can delete results. The sign-in is remembered in this browser."),
+    emailPh: L("E-mail", "E-mail", "Email"),
+    passPh: L("Heslo", "Heslo", "Password"),
+    login: L("Prihlásiť", "Přihlásit", "Sign in"),
+    loginBad: L("Prihlásenie sa nepodarilo", "Přihlášení se nepodařilo", "Sign-in failed"),
   };
   const $ = id => document.getElementById(id);
   const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
@@ -107,7 +121,10 @@ const Brain = (() => {
     if (isBest) save("best." + key, score);
     // tabuľka: pre každého hráča len jeho najlepší výsledok
     const lb = gload("lb." + key, {}), me = user() || "?";
-    if (!(me in lb) || (lower ? score < lb[me] : score > lb[me])) { lb[me] = score; gsave("lb." + key, lb); }
+    if (!(me in lb) || (lower ? score < lb[me] : score > lb[me])) {
+      lb[me] = score; gsave("lb." + key, lb);
+      if (cloudOn()) enqueue(key, me, score);
+    }
     markDay();
     return { isBest, prev, best: isBest ? score : prev, hist: hist.slice(-60) };
   }
@@ -187,56 +204,151 @@ const Brain = (() => {
 
   // ---- spoločná tabuľka online (Firestore REST, bez knižnice) ----
   const cloudOn = () => !!(CLOUD.projectId && CLOUD.apiKey) && typeof fetch === "function";
-  async function fsCall(path, body) {
+  const DOCS = () => `projects/${encodeURIComponent(CLOUD.projectId)}/databases/(default)/documents`;
+  const withKey = url => `${url}${url.includes("?") ? "&" : "?"}key=${encodeURIComponent(CLOUD.apiKey)}`;
+  // JSON požiadavka s časovým limitom; chyba nesie hlášku servera (napr. INVALID_LOGIN_CREDENTIALS)
+  async function req(url, { method = "POST", body, form, token } = {}) {
     const ctl = typeof AbortController === "function" ? new AbortController() : null;
     const timer = ctl && setTimeout(() => ctl.abort(), 8000);
     try {
-      const url = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(CLOUD.projectId)}/databases/(default)/documents${path}?key=${encodeURIComponent(CLOUD.apiKey)}`;
-      const r = await fetch(url, {
-        method: path.startsWith(":") ? "POST" : "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+      const headers = { "Content-Type": form ? "application/x-www-form-urlencoded" : "application/json" };
+      if (token) headers.Authorization = "Bearer " + token;
+      const r = await fetch(withKey(url), {
+        method, headers,
+        body: form ? new URLSearchParams(form).toString() : body === undefined ? undefined : JSON.stringify(body),
         signal: ctl ? ctl.signal : undefined,
       });
-      if (!r.ok) throw new Error("Firestore HTTP " + r.status);
-      return r.json();
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error((data.error && (data.error.message || data.error.status)) || "HTTP " + r.status);
+      return data;
     } finally { if (timer) clearTimeout(timer); }
   }
-  // { meno: výsledok } zo servera; pri viacerých dokumentoch s rovnakým menom ten najlepší
+  const fs = (path, opts) => req(`https://firestore.googleapis.com/v1/${DOCS()}${path}`, opts);
+  // { lb: { meno: výsledok }, docs: { meno: [id dokumentov] } } zo servera;
+  // pri viacerých dokumentoch s rovnakým menom platí najlepší
   async function cloudLoad(key, lower) {
-    const rows = await fsCall(":runQuery", { structuredQuery: {
+    const rows = await fs(":runQuery", { body: { structuredQuery: {
       from: [{ collectionId: "scores" }],
       where: { fieldFilter: { field: { fieldPath: "g" }, op: "EQUAL", value: { stringValue: key } } },
       limit: 1000,
-    } });
-    const lb = {};
+    } } });
+    const lb = {}, docs = {};
     for (const { document: d } of rows) {
       if (!d || !d.fields || !d.fields.n || !d.fields.s) continue;
       const n = cleanName(d.fields.n.stringValue), v = d.fields.s;
       const s = Number(v.integerValue ?? v.doubleValue);
-      if (n && Number.isFinite(s) && (!(n in lb) || better(s, lb[n], lower))) lb[n] = s;
+      if (!n || !Number.isFinite(s)) continue;
+      (docs[n] = docs[n] || []).push(d.name.slice(d.name.lastIndexOf("/") + 1));
+      if (!(n in lb) || better(s, lb[n], lower)) lb[n] = s;
     }
-    return lb;
+    return { lb, docs };
   }
+  // id dokumentu hráča v danej hre (bez „/“, aby nerozbilo cestu)
+  const docId = (key, name) => encodeURIComponent(key + "|" + name);
   function cloudPut(key, name, score, lower) {
-    const id = encodeURIComponent(encodeURIComponent(key + "|" + name));
-    return fsCall("/scores/" + id, { fields: {
+    return fs("/scores/" + encodeURIComponent(docId(key, name)), { method: "PATCH", body: { fields: {
       g: { stringValue: key },
       n: { stringValue: name },
       s: Number.isInteger(score) ? { integerValue: String(score) } : { doubleValue: score },
       lower: { booleanValue: !!lower },
       t: { timestampValue: new Date().toISOString() },
-    } });
+    } } });
   }
-  // Stiahne tabuľku zo servera a nahrá doň lepšie výsledky hráčov z tohto zariadenia
-  // (aj tie spred zapnutia spoločnej tabuľky). Vráti spojenú tabuľku.
+  function enqueue(key, name, score) {
+    const q = gload("lbq", {});
+    (q[key] = q[key] || {})[name] = score;
+    gsave("lbq", q);
+  }
+  // Stiahne tabuľku a odošle čakajúce výsledky. Staré lokálne rekordy (spred spoločnej
+  // tabuľky) sa pri prvej synchronizácii hry nahrajú len raz – inak by sa zmazané
+  // riadky z tohto zariadenia vracali.
   async function cloudSync(key, lower) {
-    const lb = await cloudLoad(key, lower);
-    const ups = Object.entries(gload("lb." + key, {}))
-      .filter(([n, s]) => !(n in lb) || better(s, lb[n], lower))
-      .map(([n, s]) => { lb[n] = s; return cloudPut(key, n, s, lower).catch(() => {}); });
-    await Promise.all(ups);
-    return lb;
+    const { lb, docs } = await cloudLoad(key, lower);
+    const synced = gload("lbsynced", []);
+    const pending = { ...(synced.includes(key) ? {} : gload("lb." + key, {})), ...(gload("lbq", {})[key] || {}) };
+    const sent = await Promise.all(Object.entries(pending).map(async ([n, s]) => {
+      if (n in lb && !better(s, lb[n], lower)) return true;
+      lb[n] = s; // aj keď sa nepodarí odoslať, vlastný výsledok sa ukáže
+      try { await cloudPut(key, n, s, lower); return true; } catch (e) { return false; }
+    }));
+    const ok = Object.keys(pending).filter((n, i) => sent[i]);
+    // fronta sa číta znova – počas odosielania mohol pribudnúť nový výsledok
+    const q = gload("lbq", {});
+    for (const n of ok) if (q[key] && q[key][n] === pending[n]) delete q[key][n];
+    if (q[key] && !Object.keys(q[key]).length) delete q[key];
+    gsave("lbq", q);
+    if (!synced.includes(key) && ok.length === Object.keys(pending).length) gsave("lbsynced", [...synced, key]);
+    // riadok, ktorý na serveri chýba (zmazal ho správca), zmizne aj z lokálnej tabuľky –
+    // inak by sa ďalší, horší výsledok toho hráča už nikdy neodoslal
+    if (synced.includes(key)) {
+      const local = gload("lb." + key, {});
+      const gone = Object.keys(local).filter(n => !(n in lb));
+      if (gone.length) { gone.forEach(n => delete local[n]); gsave("lb." + key, local); }
+    }
+    return { lb, docs };
+  }
+
+  // ---- správca: mazanie riadkov (Firebase Auth, e-mail + heslo) ----
+  const isAdmin = () => cloudOn() && !!CLOUD.admin && user() === CLOUD.admin;
+  function keepToken(id, refresh, secs) { gsave("admin", { id, refresh, exp: Date.now() + Number(secs) * 1000 }); return id; }
+  // Platný token správcu; po vypršaní sa obnoví, inak sa otvorí prihlásenie (null = zrušené).
+  async function adminToken() {
+    const a = gload("admin", null);
+    if (a && a.exp > Date.now() + 60000) return a.id;
+    if (a && a.refresh) {
+      try {
+        const r = await req("https://securetoken.googleapis.com/v1/token", { form: { grant_type: "refresh_token", refresh_token: a.refresh } });
+        return keepToken(r.id_token, r.refresh_token, r.expires_in);
+      } catch (e) { gsave("admin", null); }
+    }
+    return adminLogin();
+  }
+  function adminLogin() {
+    return new Promise(done => {
+      gateOpen = true;
+      const ov = document.createElement("div");
+      ov.className = "usergate";
+      ov.innerHTML = `
+        <div class="card gate">
+          <h2>${t(S.adminTitle)}</h2>
+          <input id="adminEmail" type="email" placeholder="${t(S.emailPh)}" autocomplete="username">
+          <input id="adminPass" type="password" placeholder="${t(S.passPh)}" autocomplete="current-password">
+          <p class="err" id="adminErr"></p>
+          <p class="muted">${t(S.adminWhy)}</p>
+          <div class="btnrow">
+            <button type="button" id="adminCancel">${t(S.cancel)}</button>
+            <button type="button" class="primary" id="adminOk">${t(S.login)}</button>
+          </div>
+        </div>`;
+      document.body.appendChild(ov);
+      const close = v => { ov.remove(); gateOpen = false; done(v); };
+      const go = async () => {
+        $("adminErr").textContent = "";
+        try {
+          const r = await req("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword",
+            { body: { email: $("adminEmail").value.trim(), password: $("adminPass").value, returnSecureToken: true } });
+          close(keepToken(r.idToken, r.refreshToken, r.expiresIn));
+        } catch (e) { $("adminErr").textContent = `${t(S.loginBad)} (${e.message})`; }
+      };
+      $("adminOk").addEventListener("click", go);
+      $("adminPass").addEventListener("keydown", e => { if (e.key === "Enter") go(); });
+      $("adminCancel").addEventListener("click", () => close(null));
+      $("adminEmail").focus();
+    });
+  }
+  // Zmaže riadok hráča zo servera aj z tohto zariadenia (tabuľka, rekord, história, fronta).
+  async function deleteRow(key, name, ids) {
+    if (!confirm(`${t(S.delAsk)} „${name}“?`)) return false;
+    const token = await adminToken();
+    if (!token) return false;
+    // aj vlastné id – riadok mohol práve pribudnúť pri tejto synchronizácii
+    for (const id of new Set([...ids, docId(key, name)])) await fs("/scores/" + encodeURIComponent(id), { method: "DELETE", token });
+    const lb = gload("lb." + key, {});
+    if (name in lb) { delete lb[name]; gsave("lb." + key, lb); }
+    const q = gload("lbq", {});
+    if (q[key] && name in q[key]) { delete q[key][name]; gsave("lbq", q); }
+    if (users().includes(name)) { gsave(`u.${name}.best.${key}`, null); gsave(`u.${name}.h.${key}`, []); }
+    return true;
   }
 
   // ---- tabuľka najlepších (vpravo vedľa hry) ----
@@ -245,20 +357,23 @@ const Brain = (() => {
   function board(key, { lower = false, fmt = String } = {}) {
     if (!$("board")) return;
     const seq = ++boardSeq;
-    if (!cloudOn()) { drawBoard(gload("lb." + key, {}), lower, fmt, S.netLocal); return; }
-    drawBoard(gload("lb." + key, {}), lower, fmt, S.netSync);
+    const opts = { key, lower, fmt };
+    if (!cloudOn()) { drawBoard(gload("lb." + key, {}), opts, S.netLocal); return; }
+    drawBoard(gload("lb." + key, {}), opts, S.netSync);
     // kým príde odpoveď, mohla sa zobraziť iná tabuľka (zmena režimu) – tá staršia sa zahodí
     cloudSync(key, lower).then(
-      lb => { if (seq === boardSeq) drawBoard(lb, lower, fmt, S.netOn); },
-      () => { if (seq === boardSeq) drawBoard(gload("lb." + key, {}), lower, fmt, S.netOff); });
+      ({ lb, docs }) => { if (seq === boardSeq) drawBoard(lb, opts, S.netOn, docs); },
+      () => { if (seq === boardSeq) drawBoard(gload("lb." + key, {}), opts, S.netOff); });
   }
-  function drawBoard(lb, lower, fmt, net) {
+  // docs = id dokumentov zo servera; keď sú a hrá správca, riadky majú 🗑
+  function drawBoard(lb, { key, lower, fmt }, net, docs = null) {
     const el = $("board");
     if (!el) return;
-    const me = user();
+    const me = user(), admin = !!docs && isAdmin();
     const all = Object.entries(lb).sort((a, b) => (lower ? a[1] - b[1] : b[1] - a[1]));
     const mine = all.findIndex(([n]) => n === me);
-    const row = ([n, s], i) => `<li class="${n === me ? "me" : ""}"><span class="r">${i + 1}.</span><span class="n">${esc(n)}</span><b>${fmt(s)}</b></li>`;
+    const del = n => (admin ? `<button type="button" class="del" data-n="${esc(n)}" title="${t(S.del)}">🗑</button>` : "");
+    const row = ([n, s], i) => `<li class="${n === me ? "me" : ""}"><span class="r">${i + 1}.</span><span class="n">${esc(n)}</span><b>${fmt(s)}</b>${del(n)}</li>`;
     // aktuálne nastavenia hry (režim, obtiažnosť…) – aby bolo jasné, čoho sa tabuľka týka
     const mode = [...document.querySelectorAll("#controls .seg button.active")].map(b => b.textContent).join(" · ");
     el.innerHTML = `
@@ -266,6 +381,17 @@ const Brain = (() => {
       ${mode ? `<p class="muted">${esc(mode)}</p>` : ""}
       ${all.length ? `<ol class="lb">${all.slice(0, 10).map(row).join("")}${mine >= 10 ? `<li class="gap">…</li>${row(all[mine], mine)}` : ""}</ol>` : `<p class="muted">${t(S.boardEmpty)}</p>`}
       <p class="muted net">${t(net)}</p>`;
+    if (!admin) return;
+    el.querySelectorAll(".lb .del").forEach(b => b.addEventListener("click", async () => {
+      b.disabled = true;
+      try {
+        if (await deleteRow(key, b.dataset.n, docs[b.dataset.n] || [])) board(key, { lower, fmt });
+        else b.disabled = false;
+      } catch (e) {
+        b.disabled = false;
+        el.querySelector(".net").textContent = `${t(S.delFail)} (${e.message})`;
+      }
+    }));
   }
 
   // ---- stránka ----

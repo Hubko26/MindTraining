@@ -428,21 +428,35 @@ test("denný tréning: plán je deterministický, jedna hra z každej skupiny", 
 // Falošný Firestore: runQuery (filter g == kľúč) a PATCH dokumentu v kolekcii scores.
 function fakeFirestore() {
   const docs = new Map();
-  const fetch = async (url, { method, body }) => {
+  const log = [];
+  const fetch = async (url, { method, body, headers }) => {
+    log.push(`${method} ${url.split("?")[0].split("/").pop()}`);
+    if (url.includes("identitytoolkit")) {
+      const { email, password } = JSON.parse(body);
+      if (email === "admin@x.sk" && password === "tajne")
+        return { ok: true, json: async () => ({ idToken: "TOKEN", refreshToken: "R", expiresIn: "3600" }) };
+      return { ok: false, status: 400, json: async () => ({ error: { message: "INVALID_LOGIN_CREDENTIALS" } }) };
+    }
+    if (method === "DELETE") {
+      if (headers.Authorization !== "Bearer TOKEN") return { ok: false, status: 403, json: async () => ({ error: { message: "PERMISSION_DENIED" } }) };
+      docs.delete(decodeURIComponent(decodeURIComponent(url.split("/scores/")[1].split("?")[0])));
+      return { ok: true, json: async () => ({}) };
+    }
     const req = JSON.parse(body);
     if (url.includes(":runQuery")) {
       const g = req.structuredQuery.where.fieldFilter.value.stringValue;
-      const rows = [...docs.values()].filter(d => d.fields.g.stringValue === g).map(d => ({ document: d }));
+      const rows = [...docs.entries()].filter(([, d]) => d.fields.g.stringValue === g)
+        .map(([id, d]) => ({ document: { name: "projects/p/databases/(default)/documents/scores/" + id, fields: d.fields } }));
       return { ok: true, json: async () => (rows.length ? rows : [{ readTime: "x" }]) };
     }
     assert.equal(method, "PATCH");
     const id = decodeURIComponent(decodeURIComponent(url.split("/scores/")[1].split("?")[0]));
-    docs.set(id, { name: id, fields: req.fields });
+    docs.set(id, { fields: req.fields });
     return { ok: true, json: async () => ({}) };
   };
-  return { docs, fetch };
+  return { docs, fetch, log };
 }
-const settle = () => new Promise(r => setTimeout(r, 0));
+const settle = async (n = 10) => { for (let i = 0; i < n; i++) await new Promise(r => setTimeout(r, 0)); };
 
 test("spoločná tabuľka: výsledky z dvoch zariadení sa spoja cez Firestore", async () => {
   const fs = fakeFirestore();
@@ -492,4 +506,53 @@ test("tlačidlo späť v hlavičke: na zoznam hier, v dennom tréningu na tréni
   const b = ctx.document.getElementById("backBtn");
   assert.equal(b.getAttribute("href"), "../");
   assert.match(b.textContent, /Hry/);
+});
+
+test("spoločná tabuľka: správca (Hubko) maže riadky po prihlásení, zmazané sa nevrátia", async () => {
+  const fs = fakeFirestore();
+  const device = (name, store = {}) => {
+    const ctx = load("schulte", { store: { ...asUser(name), ...store } });
+    ctx.fetch = fs.fetch;
+    ctx.confirm = () => true;
+    Object.assign(ctx.Brain.cloud, { projectId: "p", apiKey: "k", admin: "Hubko" });
+    return ctx;
+  };
+  const names = ctx => ctx.document.querySelectorAll("#board .lb .n").map(x => x.textContent);
+  const jano = device("Jano");
+  jano.Brain.record("k", 30); jano.Brain.board("k"); await settle();
+  // bežný hráč tlačidlá na mazanie nemá
+  assert.equal(jano.document.querySelectorAll("#board .del").length, 0);
+  // Hubko má starý vývojový rekord len v prehliadači – nahrá sa
+  const hub = device("Hubko", { "brain.lb.k": JSON.stringify({ Hubko: 99 }), "brain.u.Hubko.best.k": "99" });
+  hub.Brain.board("k"); await settle();
+  assert.deepEqual(names(hub), ["Hubko", "Jano"]);
+  const delBtn = n => hub.document.querySelectorAll("#board .del").find(b => b.dataset.n === n);
+  // zlé heslo → chyba, zrušenie → nič sa nezmaže
+  delBtn("Hubko").click(); await settle();
+  hub.document.getElementById("adminEmail").value = "admin@x.sk";
+  hub.document.getElementById("adminPass").value = "zle";
+  hub.document.getElementById("adminOk").click(); await settle();
+  assert.match(hub.document.getElementById("adminErr").textContent, /INVALID_LOGIN_CREDENTIALS/);
+  hub.document.getElementById("adminCancel").click(); await settle();
+  assert.equal(fs.docs.size, 2);
+  // správne heslo → riadok zmizne zo servera aj z prehliadača
+  delBtn("Hubko").click(); await settle();
+  hub.document.getElementById("adminEmail").value = "admin@x.sk";
+  hub.document.getElementById("adminPass").value = "tajne";
+  hub.document.getElementById("adminOk").click(); await settle();
+  assert.deepEqual([...fs.docs.keys()], ["k|Jano"]);
+  assert.deepEqual(names(hub), ["Jano"]);
+  assert.equal(hub.Brain.best("k"), null);
+  assert.deepEqual({ ...hub.Brain.gload("lb.k", {}) }, {});
+  // druhé mazanie už prihlásenie nepýta; Jano svoj zmazaný výsledok znova nenahrá
+  delBtn("Jano").click(); await settle();
+  assert.equal(hub.document.querySelector(".usergate"), null);
+  assert.equal(fs.docs.size, 0);
+  jano.Brain.board("k"); await settle();
+  assert.equal(fs.docs.size, 0);
+  assert.deepEqual(names(jano), []);
+  // nový výsledok sa normálne nahrá
+  jano.Brain.record("k", 12); jano.Brain.board("k"); await settle();
+  assert.deepEqual(names(jano), ["Jano"]);
+  assert.equal(fs.docs.get("k|Jano").fields.s.integerValue, "12");
 });
