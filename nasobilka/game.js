@@ -50,23 +50,15 @@ function heatmap(max, boxes) {
 }
 const mastered = (list, boxes) => list.filter(k => (boxes[k] || 0) >= 4).length;
 
-// Výsledok do tabuľky: najprv počet správnych, pri zhode kratší celkový čas kola.
-// Jedno číslo (väčšie = lepšie): správne × SCALE + (SCALE − čas v desatinách s).
-// Čas 0,1 s – 2,75 h; NO_TIME = výsledok spred merania času (čas neznámy, najhorší).
-const SCALE = 100000, NO_TIME = 99000;
-const encode = (ok, ms) => ok * SCALE + SCALE - Brain.clamp(Math.round(ms / 100), 1, NO_TIME - 1);
-function decode(s) {
-  if (s <= SESSION) return { ok: s, ms: null };  // starý formát: len počet správnych
-  const tenths = SCALE - (s % SCALE);
-  return { ok: Math.floor(s / SCALE), ms: tenths >= NO_TIME ? null : tenths * 100 };
-}
-function fmtScore(s) {
-  const d = decode(s);
-  return `${d.ok}/${SESSION} · ${d.ms === null ? "–" : Brain.secs(d.ms)}`;
-}
+// Výsledok do tabuľky: najprv počet správnych, pri zhode kratší celkový čas kola
+// (jedno číslo, kódovanie v Brain.okTime – vie ho zobraziť aj úvodná stránka).
+const OT = Brain.okTime(SESSION);
+const encode = OT.encode;
+const decode = OT.decode;
+const fmtScore = OT.fmt;
 // Staré výsledky (len počet správnych) prevedie na nový formát s neznámym časom.
 function migrate() {
-  const up = s => (typeof s === "number" && s <= SESSION ? s * SCALE + SCALE - NO_TIME : s);
+  const up = OT.upgrade;
   for (const v of RANGES) {
     const k = "nasobilka." + v;
     const b = Brain.best(k);

@@ -102,6 +102,23 @@ const Brain = (() => {
   }
   const secs = ms => num(ms / 1000, 1, true) + " s";
 
+  // Výsledok „správne, pri zhode kratší čas“ ako jedno číslo (väčšie = lepšie), aby fungovalo
+  // bežné triedenie aj pravidlá servera: správne × SCALE + (SCALE − čas v desatinách s).
+  // Čas 0,1 s – 2,75 h; NO_TIME = výsledok spred merania času (čas neznámy, najhorší).
+  // total = počet úloh; staré výsledky (len počet správnych) sú ≤ total.
+  function okTime(total) {
+    const SCALE = 100000, NO_TIME = 99000;
+    const encode = (ok, ms) => ok * SCALE + SCALE - clamp(Math.round(ms / 100), 1, NO_TIME - 1);
+    function decode(s) {
+      if (s <= total) return { ok: s, ms: null };
+      const tenths = SCALE - (s % SCALE);
+      return { ok: Math.floor(s / SCALE), ms: tenths >= NO_TIME ? null : tenths * 100 };
+    }
+    const fmt = s => { const d = decode(s); return `${d.ok}/${total} · ${d.ms === null ? "–" : secs(d.ms)}`; };
+    const upgrade = s => (typeof s === "number" && s <= total ? s * SCALE + SCALE - NO_TIME : s);
+    return { encode, decode, fmt, upgrade };
+  }
+
   // ---- výsledky ----
   function history(key) { return load("h." + key, []); }
   function best(key) { return load("best." + key, null); }
@@ -237,14 +254,34 @@ const Brain = (() => {
     } } });
     const lb = {}, docs = {};
     for (const { document: d } of rows) {
-      if (!d || !d.fields || !d.fields.n || !d.fields.s) continue;
-      const n = cleanName(d.fields.n.stringValue), v = d.fields.s;
-      const s = Number(v.integerValue ?? v.doubleValue);
-      if (!n || !Number.isFinite(s)) continue;
-      (docs[n] = docs[n] || []).push(d.name.slice(d.name.lastIndexOf("/") + 1));
-      if (!(n in lb) || better(s, lb[n], lower)) lb[n] = s;
+      const r = fsRow(d);
+      if (!r) continue;
+      (docs[r.n] = docs[r.n] || []).push(d.name.slice(d.name.lastIndexOf("/") + 1));
+      if (!(r.n in lb) || better(r.s, lb[r.n], lower)) lb[r.n] = r.s;
     }
     return { lb, docs };
+  }
+  // dokument zo servera → { g, n, s } alebo null, keď je neúplný
+  function fsRow(d) {
+    if (!d || !d.fields || !d.fields.g || !d.fields.n || !d.fields.s) return null;
+    const n = cleanName(d.fields.n.stringValue), v = d.fields.s;
+    const s = Number(v.integerValue ?? v.doubleValue);
+    return n && Number.isFinite(s) ? { g: d.fields.g.stringValue, n, s } : null;
+  }
+  // Tabuľky viacerých hier naraz (úvodná stránka): spec = { kľúč: lower } → { kľúč: { meno: výsledok } }.
+  // online = zo servera (jedna požiadavka) + výsledky čakajúce na odoslanie; staré lokálne
+  // rekordy len pri hrách, ktoré sa ešte nesynchronizovali – inak by sa ukázali riadky,
+  // ktoré správca zmazal. Bez online len údaje z tohto zariadenia.
+  async function allBoards(spec, { online = cloudOn() } = {}) {
+    const synced = online ? gload("lbsynced", []) : [], q = gload("lbq", {}), out = {};
+    const put = (k, n, s) => { if (!(n in out[k]) || better(s, out[k][n], spec[k])) out[k][n] = s; };
+    for (const k in spec) out[k] = synced.includes(k) ? {} : { ...gload("lb." + k, {}) };
+    if (online) {
+      const rows = await fs(":runQuery", { body: { structuredQuery: { from: [{ collectionId: "scores" }], limit: 5000 } } });
+      for (const { document: d } of rows) { const r = fsRow(d); if (r && r.g in out) put(r.g, r.n, r.s); }
+    }
+    for (const k in spec) for (const [n, s] of Object.entries(q[k] || {})) put(k, n, s);
+    return out;
   }
   // id dokumentu hráča v danej hre (bez „/“, aby nerozbilo cestu)
   const docId = (key, name) => encodeURIComponent(key + "|" + name);
@@ -618,8 +655,8 @@ const Brain = (() => {
 
   return {
     L, S, rnd, pick, shuffle, clamp, sleep, esc, load, save, gload, gsave, today, num, secs,
-    user, users, setUser, askUser, ensureUser, board, cloud: CLOUD,
-    history, best, record, markDay, dailyPlan, inDaily, dailyFinish,
+    user, users, setUser, askUser, ensureUser, board, allBoards, cloudOn, cloud: CLOUD,
+    history, best, record, markDay, okTime, dailyPlan, inDaily, dailyFinish,
     onKey, page, playing, choice, spark, intro, result, waitNext, numpad, countdown, stopwatch,
     get key() { return gameKey; },
   };

@@ -585,3 +585,30 @@ test("násobilka: tabuľka podľa správnych, pri zhode podľa času; staré vý
   const rows = ctx.document.querySelectorAll("#board .lb li").map(li => li.querySelector(".n").textContent + " " + li.querySelector("b").textContent);
   assert.deepEqual(rows, ["Ema 20/20 · 61,0 s", "Mia 18/20 · 25,0 s", "Jano 18/20 · 30,0 s"]);
 });
+
+test("spoločná tabuľka: všetky tabuľky naraz pre úvodnú stránku", async () => {
+  const fs = fakeFirestore();
+  const ctx = load("schulte", { store: {
+    ...asUser("Ema"),
+    "brain.lb.a": JSON.stringify({ Ema: 5, Stary: 99 }),   // a je zosynchronizovaná – Stary bol zmazaný
+    "brain.lb.b": JSON.stringify({ Ema: 7 }),              // b ešte nie – lokálny rekord sa ukáže
+    "brain.lbsynced": JSON.stringify(["a"]),
+    "brain.lbq": JSON.stringify({ a: { Ema: 6 } }),
+  } });
+  ctx.fetch = fs.fetch;
+  Object.assign(ctx.Brain.cloud, { projectId: "p", apiKey: "k" });
+  const put = (g, n, s) => fs.docs.set(encodeURIComponent(g + "|" + n), { fields: { g: { stringValue: g }, n: { stringValue: n }, s: { integerValue: String(s) } } });
+  put("a", "Ema", 5); put("a", "Jano", 8); put("b", "Jano", 3); put("c", "Jano", 1);
+  // runQuery vo falošnom serveri filtruje podľa g – pre dotaz bez filtra vráti všetko
+  const orig = fs.fetch;
+  ctx.fetch = async (url, o) => {
+    const body = o.body && JSON.parse(o.body);
+    if (url.includes(":runQuery") && !body.structuredQuery.where)
+      return { ok: true, json: async () => [...fs.docs.values()].map(d => ({ document: { name: "x/scores/y", fields: d.fields } })) };
+    return orig(url, o);
+  };
+  const on = await ctx.Brain.allBoards({ a: false, b: false });
+  assert.deepEqual(JSON.parse(JSON.stringify(on)), { a: { Ema: 6, Jano: 8 }, b: { Ema: 7, Jano: 3 } });
+  const off = await ctx.Brain.allBoards({ a: false, b: false }, { online: false });
+  assert.deepEqual(JSON.parse(JSON.stringify(off)), { a: { Ema: 6, Stary: 99 }, b: { Ema: 7 } });
+});
