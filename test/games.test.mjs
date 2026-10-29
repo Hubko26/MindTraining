@@ -424,3 +424,65 @@ test("denný tréning: plán je deterministický, jedna hra z každej skupiny", 
   assert.equal(ctx.streak({ "2026-10-26": true, "2026-10-25": true }, d), 2, "dnešok ešte nie je hotový");
   assert.equal(ctx.streak({}, d), 0);
 });
+
+// Falošný Firestore: runQuery (filter g == kľúč) a PATCH dokumentu v kolekcii scores.
+function fakeFirestore() {
+  const docs = new Map();
+  const fetch = async (url, { method, body }) => {
+    const req = JSON.parse(body);
+    if (url.includes(":runQuery")) {
+      const g = req.structuredQuery.where.fieldFilter.value.stringValue;
+      const rows = [...docs.values()].filter(d => d.fields.g.stringValue === g).map(d => ({ document: d }));
+      return { ok: true, json: async () => (rows.length ? rows : [{ readTime: "x" }]) };
+    }
+    assert.equal(method, "PATCH");
+    const id = decodeURIComponent(decodeURIComponent(url.split("/scores/")[1].split("?")[0]));
+    docs.set(id, { name: id, fields: req.fields });
+    return { ok: true, json: async () => ({}) };
+  };
+  return { docs, fetch };
+}
+const settle = () => new Promise(r => setTimeout(r, 0));
+
+test("spoločná tabuľka: výsledky z dvoch zariadení sa spoja cez Firestore", async () => {
+  const fs = fakeFirestore();
+  const device = (name, store = {}) => {
+    const ctx = load("schulte", { store: { ...asUser(name), ...store } });
+    ctx.fetch = fs.fetch;
+    Object.assign(ctx.Brain.cloud, { projectId: "p", apiKey: "k" });
+    return ctx;
+  };
+  // Ema má starší rekord len v prehliadači – po zapnutí sa nahrá
+  const ema = device("Ema", { "brain.lb.k": JSON.stringify({ Ema: 20 }) });
+  const jano = device("Jano");
+  jano.Brain.record("k", 30);
+  jano.Brain.board("k");
+  assert.match(jano.document.getElementById("board").textContent, /Načítavam/);
+  await settle(); await settle();
+  ema.Brain.board("k");
+  await settle(); await settle();
+  const names = ctx => ctx.document.querySelectorAll("#board .lb .n").map(x => x.textContent);
+  assert.deepEqual(names(ema), ["Jano", "Ema"]);
+  assert.match(ema.document.getElementById("board").textContent, /Spoločná tabuľka/);
+  // horší výsledok sa nenahrá, lepší áno
+  ema.Brain.record("k", 10);
+  ema.Brain.record("k", 40);
+  ema.Brain.board("k");
+  await settle(); await settle();
+  jano.Brain.board("k");
+  await settle(); await settle();
+  assert.deepEqual(names(jano), ["Ema", "Jano"]);
+  assert.equal(fs.docs.size, 2);
+  assert.equal(fs.docs.get("k|Ema").fields.s.integerValue, "40");
+});
+
+test("spoločná tabuľka: bez spojenia ukáže lokálne výsledky", async () => {
+  const ctx = load("schulte", { store: { ...asUser("Ema"), "brain.lb.k": JSON.stringify({ Ema: 7 }) } });
+  ctx.fetch = async () => { throw new Error("offline"); };
+  Object.assign(ctx.Brain.cloud, { projectId: "p", apiKey: "k" });
+  ctx.Brain.board("k");
+  await settle(); await settle();
+  const board = ctx.document.getElementById("board");
+  assert.match(board.textContent, /Bez spojenia/);
+  assert.deepEqual(board.querySelectorAll(".lb .n").map(x => x.textContent), ["Ema"]);
+});

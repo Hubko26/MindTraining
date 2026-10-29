@@ -5,8 +5,14 @@
 // localStorage:
 //   brain.user, brain.users     – aktuálny hráč, zoznam mien na tomto zariadení
 //   brain.u.<meno>.<kľúč>       – údaje hráča (história, rekordy, nastavenia, denný tréning)
-//   brain.lb.<kľúč>             – tabuľka najlepších: { meno: najlepší výsledok }
+//   brain.lb.<kľúč>             – tabuľka najlepších hráčov tohto zariadenia: { meno: najlepší výsledok }
+//
+// Spoločná tabuľka online: keď je vyplnené CLOUD nižšie, výsledky sa zdieľajú cez
+// Firebase Firestore (kolekcia scores, dokument { g: kľúč hry, n: meno, s: výsledok, lower }).
 const Brain = (() => {
+  // Firebase projekt pre spoločnú tabuľku (verejné údaje z firebaseConfig, nie tajomstvo).
+  // Prázdne = tabuľka len v tomto prehliadači. Nastavenie: README → Spoločná tabuľka.
+  const CLOUD = { projectId: "", apiKey: "" };
   const L = (sk, cs, en) => ({ sk, cs, en });
   const S = {
     start: L("Štart ▶", "Start ▶", "Start ▶"),
@@ -25,6 +31,11 @@ const Brain = (() => {
     boardEmpty: L("Zatiaľ nikto. Buď prvý!", "Zatím nikdo. Buď první!", "No one yet. Be the first!"),
     who: L("Kto hrá?", "Kdo hraje?", "Who's playing?"),
     whyName: L("Meno sa ukáže v tabuľke najlepších výkonov. Výsledky sa ukladajú v tomto prehliadači.", "Jméno se ukáže v tabulce nejlepších výkonů. Výsledky se ukládají v tomto prohlížeči.", "Your name appears on the leaderboard. Results are stored in this browser."),
+    whyNameCloud: L("Meno sa ukáže v spoločnej tabuľke najlepších výkonov – vidia ju všetci hráči.", "Jméno se ukáže ve společné tabulce nejlepších výkonů – vidí ji všichni hráči.", "Your name appears on the shared leaderboard that all players see."),
+    netLocal: L("📱 Len hráči z tohto zariadenia", "📱 Jen hráči z tohoto zařízení", "📱 Players on this device only"),
+    netSync: L("🌐 Načítavam…", "🌐 Načítám…", "🌐 Loading…"),
+    netOn: L("🌐 Spoločná tabuľka", "🌐 Společná tabulka", "🌐 Shared leaderboard"),
+    netOff: L("⚠️ Bez spojenia – len toto zariadenie", "⚠️ Bez připojení – jen toto zařízení", "⚠️ Offline – this device only"),
     namePh: L("Tvoje meno", "Tvoje jméno", "Your name"),
     nameReq: L("Zadaj meno.", "Zadej jméno.", "Please enter a name."),
     play: L("Hrať ▶", "Hrát ▶", "Play ▶"),
@@ -141,7 +152,7 @@ const Brain = (() => {
         ${known.length ? `<div class="known">${known.map(n => `<button type="button" data-n="${esc(n)}">${esc(n)}</button>`).join("")}</div>` : ""}
         <input id="userName" type="text" maxlength="20" placeholder="${t(S.namePh)}" autocomplete="nickname">
         <p class="err" id="userErr"></p>
-        <p class="muted">${t(S.whyName)}</p>
+        <p class="muted">${t(cloudOn() ? S.whyNameCloud : S.whyName)}</p>
         <div class="btnrow">
           ${canCancel ? `<button type="button" id="userCancel">${t(S.cancel)}</button>` : ""}
           <button type="button" class="primary" id="userOk">${t(S.play)}</button>
@@ -172,11 +183,77 @@ const Brain = (() => {
     if (!user()) askUser(false);
   }
 
+  // ---- spoločná tabuľka online (Firestore REST, bez knižnice) ----
+  const cloudOn = () => !!(CLOUD.projectId && CLOUD.apiKey) && typeof fetch === "function";
+  async function fsCall(path, body) {
+    const ctl = typeof AbortController === "function" ? new AbortController() : null;
+    const timer = ctl && setTimeout(() => ctl.abort(), 8000);
+    try {
+      const url = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(CLOUD.projectId)}/databases/(default)/documents${path}?key=${encodeURIComponent(CLOUD.apiKey)}`;
+      const r = await fetch(url, {
+        method: path.startsWith(":") ? "POST" : "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: ctl ? ctl.signal : undefined,
+      });
+      if (!r.ok) throw new Error("Firestore HTTP " + r.status);
+      return r.json();
+    } finally { if (timer) clearTimeout(timer); }
+  }
+  // { meno: výsledok } zo servera; pri viacerých dokumentoch s rovnakým menom ten najlepší
+  async function cloudLoad(key, lower) {
+    const rows = await fsCall(":runQuery", { structuredQuery: {
+      from: [{ collectionId: "scores" }],
+      where: { fieldFilter: { field: { fieldPath: "g" }, op: "EQUAL", value: { stringValue: key } } },
+      limit: 1000,
+    } });
+    const lb = {};
+    for (const { document: d } of rows) {
+      if (!d || !d.fields || !d.fields.n || !d.fields.s) continue;
+      const n = cleanName(d.fields.n.stringValue), v = d.fields.s;
+      const s = Number(v.integerValue ?? v.doubleValue);
+      if (n && Number.isFinite(s) && (!(n in lb) || better(s, lb[n], lower))) lb[n] = s;
+    }
+    return lb;
+  }
+  function cloudPut(key, name, score, lower) {
+    const id = encodeURIComponent(encodeURIComponent(key + "|" + name));
+    return fsCall("/scores/" + id, { fields: {
+      g: { stringValue: key },
+      n: { stringValue: name },
+      s: Number.isInteger(score) ? { integerValue: String(score) } : { doubleValue: score },
+      lower: { booleanValue: !!lower },
+      t: { timestampValue: new Date().toISOString() },
+    } });
+  }
+  // Stiahne tabuľku zo servera a nahrá doň lepšie výsledky hráčov z tohto zariadenia
+  // (aj tie spred zapnutia spoločnej tabuľky). Vráti spojenú tabuľku.
+  async function cloudSync(key, lower) {
+    const lb = await cloudLoad(key, lower);
+    const ups = Object.entries(gload("lb." + key, {}))
+      .filter(([n, s]) => !(n in lb) || better(s, lb[n], lower))
+      .map(([n, s]) => { lb[n] = s; return cloudPut(key, n, s, lower).catch(() => {}); });
+    await Promise.all(ups);
+    return lb;
+  }
+
   // ---- tabuľka najlepších (vpravo vedľa hry) ----
+  const better = (a, b, lower) => (lower ? a < b : a > b);
+  let boardSeq = 0;
   function board(key, { lower = false, fmt = String } = {}) {
+    if (!$("board")) return;
+    const seq = ++boardSeq;
+    if (!cloudOn()) { drawBoard(gload("lb." + key, {}), lower, fmt, S.netLocal); return; }
+    drawBoard(gload("lb." + key, {}), lower, fmt, S.netSync);
+    // kým príde odpoveď, mohla sa zobraziť iná tabuľka (zmena režimu) – tá staršia sa zahodí
+    cloudSync(key, lower).then(
+      lb => { if (seq === boardSeq) drawBoard(lb, lower, fmt, S.netOn); },
+      () => { if (seq === boardSeq) drawBoard(gload("lb." + key, {}), lower, fmt, S.netOff); });
+  }
+  function drawBoard(lb, lower, fmt, net) {
     const el = $("board");
     if (!el) return;
-    const lb = gload("lb." + key, {}), me = user();
+    const me = user();
     const all = Object.entries(lb).sort((a, b) => (lower ? a[1] - b[1] : b[1] - a[1]));
     const mine = all.findIndex(([n]) => n === me);
     const row = ([n, s], i) => `<li class="${n === me ? "me" : ""}"><span class="r">${i + 1}.</span><span class="n">${esc(n)}</span><b>${fmt(s)}</b></li>`;
@@ -185,7 +262,8 @@ const Brain = (() => {
     el.innerHTML = `
       <h3>🏆 ${t(S.board)}</h3>
       ${mode ? `<p class="muted">${esc(mode)}</p>` : ""}
-      ${all.length ? `<ol class="lb">${all.slice(0, 10).map(row).join("")}${mine >= 10 ? `<li class="gap">…</li>${row(all[mine], mine)}` : ""}</ol>` : `<p class="muted">${t(S.boardEmpty)}</p>`}`;
+      ${all.length ? `<ol class="lb">${all.slice(0, 10).map(row).join("")}${mine >= 10 ? `<li class="gap">…</li>${row(all[mine], mine)}` : ""}</ol>` : `<p class="muted">${t(S.boardEmpty)}</p>`}
+      <p class="muted net">${t(net)}</p>`;
   }
 
   // ---- stránka ----
@@ -408,7 +486,7 @@ const Brain = (() => {
 
   return {
     L, S, rnd, pick, shuffle, clamp, sleep, esc, load, save, gload, gsave, today, num, secs,
-    user, users, setUser, askUser, ensureUser, board,
+    user, users, setUser, askUser, ensureUser, board, cloud: CLOUD,
     history, best, record, markDay, dailyPlan, inDaily, dailyFinish,
     onKey, page, playing, choice, spark, intro, result, waitNext, numpad, countdown, stopwatch,
     get key() { return gameKey; },

@@ -20,10 +20,49 @@ a otvor http://localhost:5180
   (tlačidlo 👤 v hlavičke).
 - Vedľa každej hry (na mobile pod ňou) je **tabuľka najlepších výkonov** pre aktuálne nastavenie hry.
   Každý hráč je v nej len raz – so svojím najlepším výsledkom.
-- Všetko sa ukladá do `localStorage` prehliadača, takže tabuľka spája hráčov **na jednom zariadení**:
+- Osobné údaje sa ukladajú do `localStorage` prehliadača:
   - `brain.user`, `brain.users` – aktuálny hráč a zoznam mien,
   - `brain.u.<meno>.*` – história, rekordy, nastavenia a denný tréning hráča,
-  - `brain.lb.<kľúč>` – tabuľka najlepších `{ meno: výsledok }`.
+  - `brain.lb.<kľúč>` – najlepšie výsledky hráčov z tohto zariadenia `{ meno: výsledok }`.
+- **Spoločná tabuľka** (viac zariadení) ide cez Firebase Firestore – stačí vyplniť `CLOUD`
+  na začiatku `shared/brain.js`. Bez toho tabuľka ukazuje len hráčov z jedného zariadenia
+  (pod tabuľkou je 📱 / 🌐). Hráči s rovnakým menom zdieľajú jeden riadok.
+
+### Spoločná tabuľka – nastavenie Firebase
+
+1. Na <https://console.firebase.google.com> vytvor projekt (Google Analytics netreba).
+2. *Build → Firestore Database → Create database* (ľubovoľná lokalita, „production mode“).
+3. V záložke *Rules* vlož pravidlá nižšie a daj *Publish*.
+4. *Project settings → General → Your apps → Web (`</>`)* – zaregistruj appku a z `firebaseConfig`
+   skopíruj `projectId` a `apiKey` do `CLOUD` v `shared/brain.js`. Tieto údaje sú verejné,
+   prístup obmedzujú pravidlá.
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    match /scores/{id} {
+      function valid() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['g', 'n', 's', 'lower', 't'])
+          && d.g is string && d.g.size() <= 60
+          && d.n is string && d.n.size() > 0 && d.n.size() <= 20
+          && d.s is number && d.lower is bool;
+      }
+      allow read: if true;
+      allow create: if valid();
+      // prepísať sa dá len lepším výsledkom
+      allow update: if valid() && request.resource.data.lower == resource.data.lower
+        && (resource.data.lower ? request.resource.data.s < resource.data.s
+                                : request.resource.data.s > resource.data.s);
+    }
+  }
+}
+```
+
+Každý výsledok je dokument `scores/<hra|meno>` s poľami `g` (kľúč hry), `n` (meno), `s` (výsledok),
+`lower` (menej = lepšie) a `t` (čas). Pri zobrazení tabuľky sa lepšie lokálne výsledky
+hráčov z daného zariadenia nahrajú aj spätne.
 
 ## Hry
 
@@ -50,7 +89,8 @@ a otvor http://localhost:5180
 ```
 index.html            úvodná stránka
 shared/
-  brain.js            kostra hier: meno hráča, nastavenia, úvod/výsledok, tabuľka najlepších,
+  brain.js            kostra hier: meno hráča, nastavenia, úvod/výsledok, tabuľka najlepších
+                      (lokálna alebo spoločná cez Firestore),
                       číselná klávesnica, časovač, denný tréning
   brain.css, common.css
   i18n.js             lokalizácia SK/CZ/EN
