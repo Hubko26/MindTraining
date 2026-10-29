@@ -486,3 +486,10 @@ test("spoločná tabuľka: bez spojenia ukáže lokálne výsledky", async () =>
   assert.match(board.textContent, /Bez spojenia/);
   assert.deepEqual(board.querySelectorAll(".lb .n").map(x => x.textContent), ["Ema"]);
 });
+
+test("tlačidlo späť v hlavičke: na zoznam hier, v dennom tréningu na tréning", () => {
+  const ctx = load("nasobilka");
+  const b = ctx.document.getElementById("backBtn");
+  assert.equal(b.getAttribute("href"), "../");
+  assert.match(b.textContent, /Hry/);
+});

@@ -23,6 +23,8 @@ const Brain = (() => {
     result: L("Výsledok", "Výsledek", "Result"),
     back: L("← Tréning mysle", "← Trénink mysli", "← Brain training"),
     backDaily: L("← Denný tréning", "← Denní trénink", "← Daily workout"),
+    home: L("← Hry", "← Hry", "← Games"),
+    homeDaily: L("← Tréning", "← Trénink", "← Workout"),
     nextDaily: L("Ďalšia hra ▶", "Další hra ▶", "Next game ▶"),
     dailyDone: L("Denný tréning hotový ✅", "Denní trénink hotový ✅", "Daily workout done ✅"),
     daily: L("Denný tréning", "Denní trénink", "Daily workout"),
@@ -272,7 +274,7 @@ const Brain = (() => {
     const daily = inDaily();
     document.body.classList.add("brain");
     document.body.innerHTML = `
-      <header><h1>${t(title)}</h1><div class="controls" id="controls"></div></header>
+      <header><div class="titlebar"><a class="btn backbtn" id="backBtn" href="${daily ? "../trening/" : "../"}">${t(daily ? S.homeDaily : S.home)}</a><h1>${t(title)}</h1></div><div class="controls" id="controls"></div></header>
       <div class="layout"><main id="main"></main><aside class="board" id="board"></aside></div>
       <footer>${t(footer) || ""} <a href="${daily ? "../trening/" : "../"}">${t(daily ? S.backDaily : S.back)}</a></footer>`;
     ensureUser(document.querySelector("header"));

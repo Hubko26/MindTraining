@@ -30,6 +30,10 @@ body.brain {
   .board { width: min(100%, 560px); margin: 0 auto 16px; }
 }
 
+/* späť na zoznam hier (vľavo pred názvom) */
+.titlebar { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brain .backbtn { font-size: .9rem; padding: 6px 12px; white-space: nowrap; }
+
 /* meno hráča */
 .brain .userchip { font-size: .85rem; padding: 5px 10px; border-radius: 999px; margin-left: auto; }
 .userchip + .langsw { margin-left: 0; }
