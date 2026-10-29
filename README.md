@@ -70,12 +70,13 @@ service cloud.firestore {
 
 ### Mazanie riadkov (správca)
 
-Hráčovi s menom `CLOUD.admin` (v `shared/brain.js`, teraz „Hubko“) sa pri každom riadku tabuľky
-ukáže 🗑. Meno samo nič nechráni – mazanie povolia len pravidlá so správnym heslom.
+Meno `CLOUD.admin` (v `shared/brain.js`, teraz „Hubko“) je chránené: kto si ho zvolí (aj ako „hubko“),
+musí zadať heslo správcu, ktoré overí server. Zariadenie si heslo zapamätá; zariadenie s týmto menom
+bez overeného hesla musí meno zvoliť znova. Správcovi sa pri každom riadku tabuľky ukáže 🗑.
 Heslo je **len v pravidlách vo Firebase konzole** (namiesto `HESLO` vyššie), nie v kóde.
 
 Aplikácia pošle jeden atomický zápis (`documents:commit`): heslo do dokumentu `admin/del`
-s časom servera a zmazanie riadkov. Pravidlá pustia zmazanie, len keď sa v tej istej
+s časom servera a zmazanie riadkov (pri prihlásení len heslo – tak sa overí bez mazania). Pravidlá pustia zmazanie, len keď sa v tej istej
 požiadavke zapísalo správne heslo; `admin/del` sa čítať nedá. Pri prvom mazaní sa
 aplikácia spýta na heslo a zapamätá si ho v prehliadači (`brain.adminPass`).
 

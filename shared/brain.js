@@ -53,6 +53,9 @@ const Brain = (() => {
     adminPasswordTitle: localized("🔑 Heslo správcu", "🔑 Heslo správce", "🔑 Admin password"),
     adminPasswordHint: localized("Mazať výsledky smie len správca. Heslo sa zapamätá v tomto prehliadači.", "Mazat výsledky smí jen správce. Heslo se zapamatuje v tomto prohlížeči.", "Only the admin can delete results. The password is remembered in this browser."),
     passwordPlaceholder: localized("Heslo", "Heslo", "Password"),
+    protectedNameTitle: localized("🔑 Meno je chránené", "🔑 Jméno je chráněné", "🔑 Protected name"),
+    protectedNameHint: localized("Toto meno patrí správcovi. Zadaj heslo – zariadenie si ho zapamätá.", "Toto jméno patří správci. Zadej heslo – zařízení si ho zapamatuje.", "This name belongs to the admin. Enter the password – this device will remember it."),
+    verifyFailed: localized("⚠️ Heslo sa nepodarilo overiť", "⚠️ Heslo se nepodařilo ověřit", "⚠️ Could not verify the password"),
     deleteButton: localized("Zmazať", "Smazat", "Delete"),
     wrongPassword: localized("Nesprávne heslo.", "Nesprávné heslo.", "Wrong password."),
   };
@@ -84,7 +87,7 @@ const Brain = (() => {
   function user() { return cleanName(loadShared("user", "")); }
   function users() { return loadShared("users", []); }
   function setUser(name) {
-    name = cleanName(name);
+    name = isAdminName(name) ? CLOUD.admin : cleanName(name);
     if (!name) return false;
     saveShared("user", name);
     if (!users().includes(name)) saveShared("users", [...users(), name]);
@@ -219,8 +222,10 @@ const Brain = (() => {
         </div>
       </div>`;
     document.body.appendChild(ov);
-    const choose = name => {
-      if (!setUser(name)) { byId("userErr").textContent = translate(TEXT.nameRequired); return; }
+    const choose = async name => {
+      if (!cleanName(name)) { byId("userErr").textContent = translate(TEXT.nameRequired); return; }
+      if (isProtectedName(name) && !(await askAdminPassword(ADMIN_LOGIN))) return;
+      setUser(name);
       gateOpen = false;
       location.reload();
     };
@@ -231,6 +236,7 @@ const Brain = (() => {
     byId("userName").focus();
   }
   // Tlačidlo s menom do hlavičky; bez mena hneď otvorí výber (meno je povinné).
+  // Meno správcu bez overeného hesla na tomto zariadení sa nepustí – výber sa otvorí znova.
   function ensureUser(header) {
     if (header && !header.querySelector(".userchip")) {
       const b = document.createElement("button");
@@ -240,7 +246,7 @@ const Brain = (() => {
       b.addEventListener("click", () => askUser(!!user()));
       header.appendChild(b);
     }
-    if (!user()) askUser(false);
+    if (!user() || (isProtectedName(user()) && !savedAdminPassword())) askUser(false);
   }
 
   // ---- spoločná tabuľka online (Firestore REST, bez knižnice) ----
@@ -396,62 +402,80 @@ const Brain = (() => {
     saveLocalBoard(game, local);
   }
 
-  // ---- správca: mazanie riadkov heslom ----
-  // Jeden atomický zápis (commit): heslo do skrytého dokumentu admin/del s časom servera
-  // + zmazanie riadkov. Pravidlá povolia zmazanie, len keď sa v tej istej požiadavke
-  // zapísalo správne heslo (admin/del sa nedá čítať). Pravidlá: README → Mazanie riadkov.
+  // ---- správca: heslo na mazanie riadkov a na meno správcu ----
+  // Heslo overuje server: zápis do skrytého dokumentu admin/del (s časom servera) pravidlá
+  // pustia len so správnym heslom; dokument sa nedá čítať. Mazanie je jeden atomický zápis
+  // (heslo + zmazanie riadkov) – pravidlá povolia zmazanie, len keď sa v tej istej
+  // požiadavke zapísalo správne heslo. Pravidlá: README → Mazanie riadkov.
   const ADMIN_DOCUMENT = "admin/del";
-  const isAdmin = () => cloudOn() && !!CLOUD.admin && user() === CLOUD.admin;
+  // meno správcu je chránené bez ohľadu na veľké a malé písmená („hubko“ = „Hubko“)
+  const isAdminName = name => !!CLOUD.admin && cleanName(name).toLowerCase() === CLOUD.admin.toLowerCase();
+  const isProtectedName = name => cloudOn() && isAdminName(name);
+  const isAdmin = () => isProtectedName(user());
+  const savedAdminPassword = () => loadShared(STORAGE.adminPassword, "");
   const isPermissionDenied = error => error.status === "PERMISSION_DENIED";
   // meno dokumentu v tele požiadavky (nie v URL, preto bez kódovania)
   const documentName = path => `${documentsPath()}/${path}`;
+  const adminPasswordWrite = password => ({
+    update: { name: documentName(ADMIN_DOCUMENT), fields: { p: { stringValue: password } } },
+    updateTransforms: [{ fieldPath: "t", setToServerValue: "REQUEST_TIME" }],
+  });
+  const verifyAdminPassword = password => firestore(":commit", { body: { writes: [adminPasswordWrite(password)] } });
   function deleteDocuments(ids, password) {
-    return firestore(":commit", { body: { writes: [
-      { update: { name: documentName(ADMIN_DOCUMENT), fields: { p: { stringValue: password } } },
-        updateTransforms: [{ fieldPath: "t", setToServerValue: "REQUEST_TIME" }] },
-      ...ids.map(id => ({ delete: documentName("scores/" + id) })),
-    ] } });
+    const deletes = ids.map(id => ({ delete: documentName("scores/" + id) }));
+    return firestore(":commit", { body: { writes: [adminPasswordWrite(password), ...deletes] } });
   }
+  const ADMIN_LOGIN = {
+    title: TEXT.protectedNameTitle, hint: TEXT.protectedNameHint, confirmLabel: TEXT.play,
+    failedLabel: TEXT.verifyFailed, action: verifyAdminPassword,
+  };
+  const adminDelete = ids => ({
+    title: TEXT.adminPasswordTitle, hint: TEXT.adminPasswordHint, confirmLabel: TEXT.deleteButton,
+    failedLabel: TEXT.deleteFailed, action: password => deleteDocuments(ids, password),
+  });
   // Zmaže dokumenty s uloženým heslom; bez neho (alebo so zlým) sa naň spýta. false = zrušené.
   async function deleteWithPassword(ids) {
-    const saved = loadShared(STORAGE.adminPassword, "");
+    const saved = savedAdminPassword();
     if (saved) {
       try { await deleteDocuments(ids, saved); return true; } catch (error) {
         if (!isPermissionDenied(error)) throw error;
         saveShared(STORAGE.adminPassword, "");
       }
     }
-    return askPasswordAndDelete(ids);
+    return askAdminPassword(adminDelete(ids));
   }
-  function askPasswordAndDelete(ids) {
+  // Okno na heslo správcu. action(heslo) vykoná akciu na serveri, zlé heslo skončí
+  // PERMISSION_DENIED. Po úspechu sa heslo zapamätá. Vráti true = hotovo, false = zrušené.
+  function askAdminPassword({ title, hint, confirmLabel, failedLabel, action }) {
     return new Promise(resolve => {
+      const gateWasOpen = gateOpen;  // okno môže byť nad výberom hráča, ten ostáva otvorený
       gateOpen = true;
       const dialog = document.createElement("div");
       dialog.className = "usergate";
       dialog.innerHTML = `
         <div class="card gate">
-          <h2>${translate(TEXT.adminPasswordTitle)}</h2>
+          <h2>${translate(title)}</h2>
           <input id="adminPass" type="password" placeholder="${translate(TEXT.passwordPlaceholder)}" autocomplete="current-password">
           <p class="err" id="adminErr"></p>
-          <p class="muted">${translate(TEXT.adminPasswordHint)}</p>
+          <p class="muted">${translate(hint)}</p>
           <div class="btnrow">
             <button type="button" id="adminCancel">${translate(TEXT.cancel)}</button>
-            <button type="button" class="primary" id="adminOk">${translate(TEXT.deleteButton)}</button>
+            <button type="button" class="primary" id="adminOk">${translate(confirmLabel)}</button>
           </div>
         </div>`;
       document.body.appendChild(dialog);
-      const close = deleted => { dialog.remove(); gateOpen = false; resolve(deleted); };
+      const close = done => { dialog.remove(); gateOpen = gateWasOpen; resolve(done); };
       const submit = async () => {
         const password = byId("adminPass").value;
         if (!password) return;
         byId("adminErr").textContent = "";
         try {
-          await deleteDocuments(ids, password);
+          await action(password);
           saveShared(STORAGE.adminPassword, password);
           close(true);
         } catch (error) {
           byId("adminErr").textContent = isPermissionDenied(error)
-            ? translate(TEXT.wrongPassword) : `${translate(TEXT.deleteFailed)} (${error.message})`;
+            ? translate(TEXT.wrongPassword) : `${translate(failedLabel)} (${error.message})`;
         }
       };
       byId("adminOk").addEventListener("click", submit);

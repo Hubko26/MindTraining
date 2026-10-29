@@ -612,3 +612,46 @@ test("spoločná tabuľka: všetky tabuľky naraz pre úvodnú stránku", async 
   const off = await ctx.Brain.loadBoards({ a: false, b: false }, { online: false });
   assert.deepEqual(JSON.parse(JSON.stringify(off)), { a: { Ema: 6, Stary: 99 }, b: { Ema: 7 } });
 });
+
+test("chránené meno: Hubko len s heslom správcu, bez ohľadu na veľké písmená", async () => {
+  const fs = fakeFirestore();
+  const ctx = load("schulte", { store: {} });
+  ctx.fetch = fs.fetch;
+  Object.assign(ctx.Brain.cloud, { projectId: "p", apiKey: "k", admin: "Hubko" });
+  const doc = ctx.document;
+  doc.getElementById("userName").value = " hubko ";
+  doc.getElementById("userOk").click(); await settle();
+  assert.ok(doc.getElementById("adminPass"), "pýta sa heslo");
+  doc.getElementById("adminPass").value = "zle";
+  doc.getElementById("adminOk").click(); await settle();
+  assert.equal(doc.getElementById("adminErr").textContent, "Nesprávne heslo.");
+  assert.equal(ctx.Brain.user(), "");
+  // zrušenie vráti výber mena, nikto nie je prihlásený
+  doc.getElementById("adminCancel").click(); await settle();
+  assert.equal(doc.querySelector("#adminPass"), null);
+  assert.ok(doc.querySelector("#userName"));
+  assert.ok(!ctx.__reloaded);
+  // správne heslo → prihlásený ako „Hubko“, heslo zapamätané; overenie nič nezmazalo
+  doc.getElementById("userOk").click(); await settle();
+  doc.getElementById("adminPass").value = "test-heslo";
+  doc.getElementById("adminOk").click(); await settle();
+  assert.equal(ctx.Brain.user(), "Hubko");
+  assert.ok(ctx.__reloaded);
+  assert.equal(ctx.Brain.loadShared("adminPass", ""), "test-heslo");
+  // iné meno heslo nepotrebuje
+  const other = load("schulte", { store: {} });
+  other.fetch = fs.fetch;
+  Object.assign(other.Brain.cloud, { projectId: "p", apiKey: "k", admin: "Hubko" });
+  other.document.getElementById("userName").value = "Jano";
+  other.document.getElementById("userOk").click(); await settle();
+  assert.equal(other.Brain.user(), "Jano");
+});
+
+test("chránené meno: zariadenie s menom Hubko bez overeného hesla musí meno zvoliť znova", () => {
+  const ctx = load("schulte", { store: asUser("Hubko") });
+  // harness nemá fetch, preto spoločnú tabuľku zapne až po načítaní – zopakuj kontrolu mena
+  ctx.fetch = async () => ({ ok: true, json: async () => ({}) });
+  Object.assign(ctx.Brain.cloud, { projectId: "p", apiKey: "k", admin: "Hubko" });
+  ctx.Brain.ensureUser(ctx.document.querySelector("header"));
+  assert.ok(ctx.document.querySelector(".usergate"), "výber mena sa otvorí");
+});
