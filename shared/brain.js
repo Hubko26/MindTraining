@@ -12,7 +12,7 @@
 const Brain = (() => {
   // Firebase projekt pre spoločnú tabuľku (verejné údaje z firebaseConfig, nie tajomstvo).
   // Prázdne = tabuľka len v tomto prehliadači. Nastavenie: README → Spoločná tabuľka.
-  const CLOUD = { projectId: "", apiKey: "" };
+  const CLOUD = { projectId: "mindtraining-8a94a", apiKey: "AIzaSyDuF1cY5_CKn2cn7IwnK16itdI4KaZ5hGc" };
   const L = (sk, cs, en) => ({ sk, cs, en });
   const S = {
     start: L("Štart ▶", "Start ▶", "Start ▶"),
