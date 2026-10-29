@@ -8,8 +8,8 @@ const LEVELS = {
   hard: { small: 4, large: 2, min: 101, max: 999, ops: [3, 5], time: 120000 },
 };
 const OPS = ["+", "−", "×", "÷"];
-const L = Brain.L;
-const $ = id => document.getElementById(id);
+const localized = Brain.localized;
+const byId = id => document.getElementById(id);
 
 // Výsledok a op b, alebo null, ak nevznikne kladné celé číslo.
 function apply(a, op, b) {
@@ -27,7 +27,7 @@ function makePuzzle(cfg) {
     const nums = small.concat(Brain.shuffle([25, 50, 75, 100]).slice(0, cfg.large));
     let tiles = nums.slice();
     const steps = [];
-    const k = Brain.rnd(cfg.ops[0], Math.min(cfg.ops[1], nums.length - 1));
+    const k = Brain.randomInt(cfg.ops[0], Math.min(cfg.ops[1], nums.length - 1));
     for (let i = 0; i < k; i++) {
       const [x, y] = Brain.shuffle(tiles.map((_, j) => j)).slice(0, 2);
       let a = tiles[x], b = tiles[y];
@@ -64,9 +64,9 @@ const ui = Brain.page({
 const level = Brain.choice(ui.controls, {
   key: "ciel.level", label: { sk: "Obtiažnosť:", cs: "Obtížnost:", en: "Difficulty:" }, onChange: showIntro,
   options: [
-    { v: "easy", label: L("ľahké", "lehké", "easy") },
-    { v: "mid", label: L("stredné", "střední", "medium") },
-    { v: "hard", label: L("ťažké", "těžké", "hard") },
+    { v: "easy", label: localized("ľahké", "lehké", "easy") },
+    { v: "mid", label: localized("stredné", "střední", "medium") },
+    { v: "hard", label: localized("ťažké", "těžké", "hard") },
   ],
 });
 
@@ -74,7 +74,7 @@ function showIntro() {
   const cfg = LEVELS[level.value];
   Brain.intro(ui.main, {
     key: "ciel." + level.value,
-    desc: L(
+    desc: localized(
       `${PUZZLES} zadaní, na každé ${cfg.time / 1000} s. Ťukni číslo, operáciu a druhé číslo – vznikne nové číslo, s ktorým môžeš počítať ďalej. Presne = 10 b, do 5 = 7 b, do 10 = 5 b. „Hotovo" odovzdá najbližšie číslo.`,
       `${PUZZLES} zadání, na každé ${cfg.time / 1000} s. Ťukni číslo, operaci a druhé číslo – vznikne nové číslo, se kterým můžeš počítat dál. Přesně = 10 b, do 5 = 7 b, do 10 = 5 b. „Hotovo" odevzdá nejbližší číslo.`,
       `${PUZZLES} puzzles, ${cfg.time / 1000} s each. Tap a number, an operation and another number – the result becomes a new number you can keep using. Exact = 10 pts, within 5 = 7, within 10 = 5. "Done" submits your closest number.`),
@@ -88,19 +88,19 @@ function solve(pz, cfg) {
     let tiles = pz.nums.map((v, i) => ({ id: i, v, used: false }));
     let nextId = tiles.length, sel = null, op = null, over = false;
     const undo = [], log = [];
-    const box = $("play");
+    const box = byId("play");
     box.innerHTML = `
       <div class="tbar"><i id="tbar"></i></div>
-      <div class="card"><div class="target">${t(L("Cieľ", "Cíl", "Target"))} <b>${pz.target}</b></div>
+      <div class="card"><div class="target">${translate(localized("Cieľ", "Cíl", "Target"))} <b>${pz.target}</b></div>
         <div class="tiles" id="tiles"></div>
         <div class="ops" id="ops">${OPS.map(o => `<button type="button" data-op="${o}">${o}</button>`).join("")}</div>
         <div class="log muted" id="log"></div>
-        <div class="btnrow"><button type="button" id="undo">⌫ ${t(L("Späť", "Zpět", "Undo"))}</button><button type="button" class="primary" id="done">${t(L("Hotovo", "Hotovo", "Done"))}</button></div>
+        <div class="btnrow"><button type="button" id="undo">⌫ ${translate(localized("Späť", "Zpět", "Undo"))}</button><button type="button" class="primary" id="done">${translate(localized("Hotovo", "Hotovo", "Done"))}</button></div>
       </div>`;
-    const stop = Brain.countdown(cfg.time, (left, f) => { $("tbar").style.width = (f * 100).toFixed(1) + "%"; }, () => finish());
+    const stop = Brain.countdown(cfg.time, (left, f) => { byId("tbar").style.width = (f * 100).toFixed(1) + "%"; }, () => finish());
 
     function render() {
-      $("tiles").innerHTML = "";
+      byId("tiles").innerHTML = "";
       for (const tl of tiles) {
         if (tl.used) continue;
         const b = document.createElement("button");
@@ -109,10 +109,10 @@ function solve(pz, cfg) {
         b.textContent = tl.v;
         b.dataset.id = tl.id;
         b.addEventListener("click", () => tap(tl.id));
-        $("tiles").appendChild(b);
+        byId("tiles").appendChild(b);
       }
       document.querySelectorAll("#ops button").forEach(b => b.classList.toggle("active", b.dataset.op === op));
-      $("log").textContent = log.join(" · ");
+      byId("log").textContent = log.join(" · ");
     }
     function tap(id) {
       if (over) return;
@@ -143,8 +143,8 @@ function solve(pz, cfg) {
       tiles = u.tiles; log.splice(0, log.length, ...u.log); sel = null; op = null;
       render();
     }
-    $("undo").addEventListener("click", back);
-    $("done").addEventListener("click", () => finish());
+    byId("undo").addEventListener("click", back);
+    byId("done").addEventListener("click", () => finish());
     Brain.onKey(k => { if (k === "Backspace") { back(); return true; } if (k === "Enter") { finish(); return true; } return false; });
     function finish() {
       if (over) return;
@@ -163,7 +163,7 @@ async function play() {
   for (let i = 0; i < PUZZLES; i++) {
     const pz = makePuzzle(cfg);
     ui.main.innerHTML = `
-      <div class="statline"><span>${t(L("Zadanie", "Zadání", "Puzzle"))} <b>${i + 1}/${PUZZLES}</b></span><span>${t(L("Body", "Body", "Points"))} <b>${total}</b></span></div>
+      <div class="statline"><span>${translate(localized("Zadanie", "Zadání", "Puzzle"))} <b>${i + 1}/${PUZZLES}</b></span><span>${translate(localized("Body", "Body", "Points"))} <b>${total}</b></span></div>
       <div id="play" class="play"></div>`;
     const r = await solve(pz, cfg);
     const p = scoreFor(r.diff);
@@ -171,15 +171,15 @@ async function play() {
     if (r.diff === 0) exact++;
     const fb = document.createElement("div");
     fb.className = "card fb " + (r.diff === 0 ? "ok" : p ? "" : "bad");
-    fb.innerHTML = `<b>${r.diff === 0 ? t(L("🎯 Presne!", "🎯 Přesně!", "🎯 Exact!")) : t(L(`Najbližšie: ${r.best} (o ${r.diff} vedľa)`, `Nejblíž: ${r.best} (o ${r.diff} vedle)`, `Closest: ${r.best} (off by ${r.diff})`))} · +${p}</b>
-      ${r.diff === 0 ? "" : `<span class="muted">${t(L("Jedno riešenie", "Jedno řešení", "One solution"))}: ${pz.steps.join(" · ")}</span>`}`;
-    $("play").appendChild(fb);
-    await Brain.waitNext($("play"));
+    fb.innerHTML = `<b>${r.diff === 0 ? translate(localized("🎯 Presne!", "🎯 Přesně!", "🎯 Exact!")) : translate(localized(`Najbližšie: ${r.best} (o ${r.diff} vedľa)`, `Nejblíž: ${r.best} (o ${r.diff} vedle)`, `Closest: ${r.best} (off by ${r.diff})`))} · +${p}</b>
+      ${r.diff === 0 ? "" : `<span class="muted">${translate(localized("Jedno riešenie", "Jedno řešení", "One solution"))}: ${pz.steps.join(" · ")}</span>`}`;
+    byId("play").appendChild(fb);
+    await Brain.waitNext(byId("play"));
   }
   Brain.result(ui.main, {
     key: "ciel." + level.value, score: total,
-    label: L(`Body (max ${PUZZLES * 10})`, `Body (max ${PUZZLES * 10})`, `Points (max ${PUZZLES * 10})`),
-    lines: [L(`Presne trafené: ${exact}/${PUZZLES}`, `Přesně trefené: ${exact}/${PUZZLES}`, `Exact hits: ${exact}/${PUZZLES}`)],
+    label: localized(`Body (max ${PUZZLES * 10})`, `Body (max ${PUZZLES * 10})`, `Points (max ${PUZZLES * 10})`),
+    lines: [localized(`Presne trafené: ${exact}/${PUZZLES}`, `Přesně trefené: ${exact}/${PUZZLES}`, `Exact hits: ${exact}/${PUZZLES}`)],
     onAgain: play,
   });
 }

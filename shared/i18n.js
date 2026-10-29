@@ -1,8 +1,8 @@
 // Lokalizácia: slovenčina, čeština, angličtina.
 //
 // Použitie v hrách:
-//   t({ sk: "Ahoj", cs: "Ahoj", en: "Hi" })   – preloží podľa zvoleného jazyka
-//   T("difficulty")                            – spoločný reťazec zo zoznamu UI nižšie
+//   translate({ sk: "Ahoj", cs: "Ahoj", en: "Hi" })   – preloží podľa zvoleného jazyka
+//   Brain.localized("Ahoj", "Ahoj", "Hi")             – skratka na vytvorenie takého objektu
 //
 // Prepínač jazyka sa sám pridá do <header> (vpravo hore).
 const I18N = (() => {
@@ -22,7 +22,7 @@ const I18N = (() => {
   document.documentElement.lang = lang;
 
   // Preloží objekt { sk, cs, en }. Obyčajný reťazec vráti nezmenený.
-  function t(o) {
+  function translate(o) {
     if (o === null || o === undefined) return "";
     if (typeof o !== "object") return o;
     return o[lang] ?? o.sk ?? Object.values(o)[0];
@@ -53,29 +53,7 @@ const I18N = (() => {
 
   document.addEventListener("DOMContentLoaded", attach);
 
-  return { get lang() { return lang; }, t, set, attach, LANGS };
+  return { get lang() { return lang; }, translate, set, attach, LANGS };
 })();
 
-const t = I18N.t;
-
-// Spoločné reťazce, ktoré používa viac hier.
-const UI = {
-  difficulty: { sk: "Obtiažnosť:", cs: "Obtížnost:", en: "Difficulty:" },
-  speed: { sk: "Rýchlosť:", cs: "Rychlost:", en: "Speed:" },
-  mode: { sk: "Režim:", cs: "Režim:", en: "Mode:" },
-  backToGames: { sk: "← Hry", cs: "← Hry", en: "← Games" },
-  backToHub: { sk: "← Rozcestník", cs: "← Rozcestník", en: "← Home" },
-  correct: { sk: "✅ Správne!", cs: "✅ Správně!", en: "✅ Correct!" },
-  tryAgain: { sk: "Skús ešte raz.", cs: "Zkus to znovu.", en: "Try again." },
-  wellDone: { sk: "Výborne!", cs: "Výborně!", en: "Well done!" },
-  done: { sk: "Hotovo!", cs: "Hotovo!", en: "Done!" },
-  itIsA: { sk: "Je to", cs: "Je to", en: "It's a" },
-  next: { sk: "Ďalej ▶", cs: "Další ▶", en: "Next ▶" },
-  newGame: { sk: "Nové", cs: "Nová", en: "New" },
-  nextPicture: { sk: "Ďalší obrázok", cs: "Další obrázek", en: "Next picture" },
-  newPicture: { sk: "Nový obrázok", cs: "Nový obrázek", en: "New picture" },
-  print: { sk: "🖨 Tlač", cs: "🖨 Tisk", en: "🖨 Print" },
-  steps: { sk: "Kroky:", cs: "Kroky:", en: "Steps:" },
-};
-
-function T(k) { return t(UI[k]); }
+const translate = I18N.translate;

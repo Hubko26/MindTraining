@@ -4,21 +4,21 @@
 const SHEETS = 5;
 const ROWS = 10;
 const MAX_ERRORS = 4;
-const L = Brain.L;
-const $ = id => document.getElementById(id);
-const n = x => Brain.num(x);
+const localized = Brain.localized;
+const byId = id => document.getElementById(id);
+const n = x => Brain.formatNumber(x);
 
 const MAKE = {
-  add2: () => { const a = Brain.rnd(12, 99), b = Brain.rnd(12, 99); return [`${a} + ${b}`, a + b]; },
-  sub2: () => { const a = Brain.rnd(30, 99), b = Brain.rnd(11, a - 1); return [`${a} − ${b}`, a - b]; },
-  add3: () => { const a = Brain.rnd(102, 999), b = Brain.rnd(102, 999); return [`${a} + ${b}`, a + b]; },
-  sub3: () => { const a = Brain.rnd(300, 999), b = Brain.rnd(102, a - 1); return [`${a} − ${b}`, a - b]; },
-  add4: () => { const a = Brain.rnd(1002, 9999), b = Brain.rnd(1002, 9999); return [`${n(a)} + ${n(b)}`, a + b]; },
-  sub4: () => { const a = Brain.rnd(3000, 9999), b = Brain.rnd(1002, a - 1); return [`${n(a)} − ${n(b)}`, a - b]; },
-  mul21: () => { const a = Brain.rnd(12, 99), b = Brain.rnd(3, 9); return [`${a} × ${b}`, a * b]; },
-  mul22: () => { const a = Brain.rnd(12, 99), b = Brain.rnd(12, 99); return [`${a} × ${b}`, a * b]; },
-  mul31: () => { const a = Brain.rnd(102, 999), b = Brain.rnd(3, 9); return [`${a} × ${b}`, a * b]; },
-  div: () => { const b = Brain.rnd(3, 9), q = Brain.rnd(12, 99); return [`${b * q} ÷ ${b}`, q]; },
+  add2: () => { const a = Brain.randomInt(12, 99), b = Brain.randomInt(12, 99); return [`${a} + ${b}`, a + b]; },
+  sub2: () => { const a = Brain.randomInt(30, 99), b = Brain.randomInt(11, a - 1); return [`${a} − ${b}`, a - b]; },
+  add3: () => { const a = Brain.randomInt(102, 999), b = Brain.randomInt(102, 999); return [`${a} + ${b}`, a + b]; },
+  sub3: () => { const a = Brain.randomInt(300, 999), b = Brain.randomInt(102, a - 1); return [`${a} − ${b}`, a - b]; },
+  add4: () => { const a = Brain.randomInt(1002, 9999), b = Brain.randomInt(1002, 9999); return [`${n(a)} + ${n(b)}`, a + b]; },
+  sub4: () => { const a = Brain.randomInt(3000, 9999), b = Brain.randomInt(1002, a - 1); return [`${n(a)} − ${n(b)}`, a - b]; },
+  mul21: () => { const a = Brain.randomInt(12, 99), b = Brain.randomInt(3, 9); return [`${a} × ${b}`, a * b]; },
+  mul22: () => { const a = Brain.randomInt(12, 99), b = Brain.randomInt(12, 99); return [`${a} × ${b}`, a * b]; },
+  mul31: () => { const a = Brain.randomInt(102, 999), b = Brain.randomInt(3, 9); return [`${a} × ${b}`, a * b]; },
+  div: () => { const b = Brain.randomInt(3, 9), q = Brain.randomInt(12, 99); return [`${b * q} ÷ ${b}`, q]; },
 };
 const DIFF = {
   easy: ["add2", "sub2", "mul21"],
@@ -38,7 +38,7 @@ function corrupt(x) {
 }
 
 function makeSheet(kinds) {
-  const errors = Brain.rnd(0, MAX_ERRORS);
+  const errors = Brain.randomInt(0, MAX_ERRORS);
   const bad = new Set(Brain.shuffle([...Array(ROWS).keys()]).slice(0, errors));
   return Array.from({ length: ROWS }, (_, i) => {
     const [q, ans] = MAKE[Brain.pick(kinds)]();
@@ -67,16 +67,16 @@ const ui = Brain.page({
 const diff = Brain.choice(ui.controls, {
   key: "kontrolor.diff", label: { sk: "Príklady:", cs: "Příklady:", en: "Problems:" }, onChange: showIntro,
   options: [
-    { v: "easy", label: L("ľahké", "lehké", "easy") },
-    { v: "mid", label: L("stredné", "střední", "medium") },
-    { v: "hard", label: L("ťažké", "těžké", "hard") },
+    { v: "easy", label: localized("ľahké", "lehké", "easy") },
+    { v: "mid", label: localized("stredné", "střední", "medium") },
+    { v: "hard", label: localized("ťažké", "těžké", "hard") },
   ],
 });
 
 function showIntro() {
   Brain.intro(ui.main, {
     key: "kontrolor." + diff.value, fmt: s => s + " %",
-    desc: L(
+    desc: localized(
       `${SHEETS} hárkov po ${ROWS} vypočítaných príkladoch. Na každom je 0 až ${MAX_ERRORS} chýb – také, aké vznikajú z nepozornosti (o 1, o 10, prehodené číslice). Ťukni na chybné a daj „Hotovo". Za prehliadnutú chybu aj za falošný poplach prichádzaš o bod. Čas sa meria, ale nerozhoduje.`,
       `${SHEETS} listů po ${ROWS} vypočítaných příkladech. Na každém je 0 až ${MAX_ERRORS} chyb – takové, jaké vznikají z nepozornosti (o 1, o 10, prohozené číslice). Ťukni na chybné a dej „Hotovo". Za přehlédnutou chybu i za planý poplach přicházíš o bod. Čas se měří, ale nerozhoduje.`,
       `${SHEETS} sheets of ${ROWS} worked problems. Each has 0 to ${MAX_ERRORS} mistakes – the careless kind (off by 1, off by 10, swapped digits). Tap the wrong ones, then "Done". A missed mistake and a false alarm both cost a point. Time is measured but doesn't count.`),
@@ -92,16 +92,16 @@ async function play() {
     const rows = makeSheet(DIFF[diff.value]);
     const marked = new Set();
     ui.main.innerHTML = `
-      <div class="statline"><span>${t(L("Hárok", "List", "Sheet"))} <b>${s + 1}/${SHEETS}</b></span></div>
+      <div class="statline"><span>${translate(localized("Hárok", "List", "Sheet"))} <b>${s + 1}/${SHEETS}</b></span></div>
       <div class="sheet" id="sheet"></div>
-      <div id="after"><div class="btnrow"><button type="button" class="primary" id="done">${t(L("Hotovo", "Hotovo", "Done"))}</button></div></div>`;
+      <div id="after"><div class="btnrow"><button type="button" class="primary" id="done">${translate(localized("Hotovo", "Hotovo", "Done"))}</button></div></div>`;
     const els = rows.map((row, i) => {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "row";
       b.innerHTML = `<span class="k">${(i + 1) % 10}</span><span class="eq">${row.q} = <b>${n(row.shown)}</b></span><span class="mk"></span>`;
       b.addEventListener("click", () => toggle(i));
-      $("sheet").appendChild(b);
+      byId("sheet").appendChild(b);
       return b;
     });
     let over = false;
@@ -111,7 +111,7 @@ async function play() {
       els[i].classList.toggle("marked", marked.has(i));
     }
     await new Promise(res => {
-      $("done").addEventListener("click", res);
+      byId("done").addEventListener("click", res);
       Brain.onKey(k => {
         if (/^\d$/.test(k)) { toggle((Number(k) + 9) % 10); return true; }
         if (k === "Enter") { res(); return true; }
@@ -128,22 +128,22 @@ async function play() {
       if (cls) els[i].classList.add(cls);
       if (row.wrong) els[i].querySelector(".mk").textContent = `→ ${n(row.ans)}`;
     });
-    $("after").innerHTML = `<div class="fb ${g.right === ROWS ? "ok" : "bad"}"><b>${g.right === ROWS
-      ? t(L("✅ Bez chyby", "✅ Bez chyby", "✅ Spotless"))
-      : t(L(`Nájdené ${g.found}, prehliadnuté ${g.missed}, falošný poplach ${g.falseAlarm}`, `Nalezeno ${g.found}, přehlédnuto ${g.missed}, planý poplach ${g.falseAlarm}`, `Found ${g.found}, missed ${g.missed}, false alarms ${g.falseAlarm}`))}</b></div>`;
-    await Brain.waitNext($("after"));
+    byId("after").innerHTML = `<div class="fb ${g.right === ROWS ? "ok" : "bad"}"><b>${g.right === ROWS
+      ? translate(localized("✅ Bez chyby", "✅ Bez chyby", "✅ Spotless"))
+      : translate(localized(`Nájdené ${g.found}, prehliadnuté ${g.missed}, falošný poplach ${g.falseAlarm}`, `Nalezeno ${g.found}, přehlédnuto ${g.missed}, planý poplach ${g.falseAlarm}`, `Found ${g.found}, missed ${g.missed}, false alarms ${g.falseAlarm}`))}</b></div>`;
+    await Brain.waitNext(byId("after"));
   }
   const pct = Math.round(tot.right / (SHEETS * ROWS) * 100);
   Brain.result(ui.main, {
     key: "kontrolor." + diff.value, score: pct, fmt: x => x + " %",
-    label: L("Správne posúdené riadky", "Správně posouzené řádky", "Rows judged correctly"),
+    label: localized("Správne posúdené riadky", "Správně posouzené řádky", "Rows judged correctly"),
     lines: [
-      L(`Nájdené chyby: ${tot.found}/${tot.errors}`, `Nalezené chyby: ${tot.found}/${tot.errors}`, `Mistakes found: ${tot.found}/${tot.errors}`),
-      L(`Falošné poplachy: ${tot.falseAlarm}`, `Plané poplachy: ${tot.falseAlarm}`, `False alarms: ${tot.falseAlarm}`),
-      L(`Čas: ${Brain.secs(Date.now() - t0)}`, `Čas: ${Brain.secs(Date.now() - t0)}`, `Time: ${Brain.secs(Date.now() - t0)}`),
+      localized(`Nájdené chyby: ${tot.found}/${tot.errors}`, `Nalezené chyby: ${tot.found}/${tot.errors}`, `Mistakes found: ${tot.found}/${tot.errors}`),
+      localized(`Falošné poplachy: ${tot.falseAlarm}`, `Plané poplachy: ${tot.falseAlarm}`, `False alarms: ${tot.falseAlarm}`),
+      localized(`Čas: ${Brain.formatSeconds(Date.now() - t0)}`, `Čas: ${Brain.formatSeconds(Date.now() - t0)}`, `Time: ${Brain.formatSeconds(Date.now() - t0)}`),
       tot.missed > tot.falseAlarm
-        ? L("Viac chýb ti ušlo, než si videl navyše – skús každý riadok naozaj prepočítať, nie len „preletieť“.", "Víc chyb ti uteklo, než jsi viděl navíc – zkus každý řádek opravdu přepočítat, ne jen „přeletět“.", "You missed more than you over-flagged – actually recompute each row instead of skimming.")
-        : L("Dobrá rovnováha – kontroluješ, nie hádaš.", "Dobrá rovnováha – kontroluješ, nehádáš.", "Good balance – you're checking, not guessing."),
+        ? localized("Viac chýb ti ušlo, než si videl navyše – skús každý riadok naozaj prepočítať, nie len „preletieť“.", "Víc chyb ti uteklo, než jsi viděl navíc – zkus každý řádek opravdu přepočítat, ne jen „přeletět“.", "You missed more than you over-flagged – actually recompute each row instead of skimming.")
+        : localized("Dobrá rovnováha – kontroluješ, nie hádaš.", "Dobrá rovnováha – kontroluješ, nehádáš.", "Good balance – you're checking, not guessing."),
     ],
     onAgain: play,
   });

@@ -2,8 +2,8 @@
 // Hrubo ohraničené klietky majú výsledok a operáciu (napr. „12×" = súčin 12).
 // Generátor hľadá zadanie s jediným riešením; prijme sa ale každé platné.
 const DIRS = [[0, 1], [1, 0], [0, -1], [-1, 0]];
-const L = Brain.L;
-const $ = id => document.getElementById(id);
+const localized = Brain.localized;
+const byId = id => document.getElementById(id);
 const range = n => Array.from({ length: n }, (_, i) => i);
 
 // Latinský štvorec: cyklický, s náhodne zamiešanými riadkami, stĺpcami a symbolmi.
@@ -129,8 +129,8 @@ const size = Brain.choice(ui.controls, {
 
 function showIntro() {
   Brain.intro(ui.main, {
-    key: "kalkudoku." + size.value, lower: true, fmt: Brain.secs,
-    desc: L(
+    key: "kalkudoku." + size.value, lower: true, fmt: Brain.formatSeconds,
+    desc: localized(
       `Vyplň mriežku ${size.value}×${size.value} číslami 1–${size.value}: v každom riadku a stĺpci každé raz. Čísla v ohraničenej klietke musia dať jej výsledok danou operáciou (pri − a ÷ v ľubovoľnom poradí). Rekord = najkratší čas.`,
       `Vyplň mřížku ${size.value}×${size.value} čísly 1–${size.value}: v každém řádku a sloupci každé jednou. Čísla v ohraničené kleci musí dát její výsledek danou operací (u − a ÷ v libovolném pořadí). Rekord = nejkratší čas.`,
       `Fill the ${size.value}×${size.value} grid with 1–${size.value}: each once per row and column. Numbers in an outlined cage must give its target using its operation (− and ÷ in any order). Best = fastest time.`),
@@ -149,7 +149,7 @@ function play() {
     <div class="statline"><span>⏱ <b id="time">0,0 s</b></span></div>
     <div class="kk" id="kk" style="grid-template-columns: repeat(${n}, 1fr)"></div>
     <div class="kpad" id="kpad"></div>
-    <div class="btnrow"><button type="button" id="reveal">${t(L("Ukáž riešenie", "Ukaž řešení", "Show solution"))}</button></div>`;
+    <div class="btnrow"><button type="button" id="reveal">${translate(localized("Ukáž riešenie", "Ukaž řešení", "Show solution"))}</button></div>`;
   const cellEl = [];
   for (let r = 0; r < n; r++) {
     cellEl.push([]);
@@ -165,7 +165,7 @@ function play() {
       const [r0, c0] = cg.cells.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1])[0];
       d.innerHTML = (r === r0 && c === c0 ? `<span class="lbl">${cg.target}${cg.op}</span>` : "") + `<span class="val"></span><span class="notes"></span>`;
       d.addEventListener("click", () => { sel = [r, c]; render(); });
-      $("kk").appendChild(d);
+      byId("kk").appendChild(d);
       cellEl[r].push(d);
     }
   }
@@ -176,9 +176,9 @@ function play() {
     b.textContent = k;
     b.dataset.k = k;
     b.addEventListener("click", () => { b.blur(); input(k); });
-    $("kpad").appendChild(b);
+    byId("kpad").appendChild(b);
   }
-  const stop = Brain.stopwatch(ms => { $("time").textContent = Brain.secs(ms); });
+  const stop = Brain.stopwatch(ms => { byId("time").textContent = Brain.formatSeconds(ms); });
 
   function input(k) {
     if (over) return;
@@ -218,7 +218,7 @@ function play() {
     if (k === "p" || k === "P") { input("✏️"); return true; }
     return false;
   });
-  $("reveal").addEventListener("click", () => {
+  byId("reveal").addEventListener("click", () => {
     if (over) return;
     for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) grid[r][c] = pz.sol[r][c];
     render();
@@ -228,8 +228,8 @@ function play() {
     over = true;
     const ms = stop();
     setTimeout(() => Brain.result(ui.main, {
-      key: "kalkudoku." + n, score: gaveUp ? null : ms, lower: true, fmt: Brain.secs, noRecord: gaveUp,
-      label: gaveUp ? L("Riešenie zobrazené", "Řešení zobrazeno", "Solution shown") : L(`Vyriešené ${n}×${n}`, `Vyřešeno ${n}×${n}`, `Solved ${n}×${n}`),
+      key: "kalkudoku." + n, score: gaveUp ? null : ms, lower: true, fmt: Brain.formatSeconds, noRecord: gaveUp,
+      label: gaveUp ? localized("Riešenie zobrazené", "Řešení zobrazeno", "Solution shown") : localized(`Vyriešené ${n}×${n}`, `Vyřešeno ${n}×${n}`, `Solved ${n}×${n}`),
       onAgain: play,
     }), gaveUp ? 2500 : 800);
   }

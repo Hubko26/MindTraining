@@ -73,76 +73,77 @@
     <div class="games" id="mind"></div>
   </div>
 
-  <script src="shared/i18n.js?v=a99f3957"></script>
-  <script src="shared/brain.js?v=6ed49c12"></script>
+  <script src="shared/i18n.js?v=c5d3d07f"></script>
+  <script src="shared/brain.js?v=9fdd7462"></script>
   <script>
-    // vars = varianty hry (kľúče tabuliek) od najľahšieho po najťažší, l = popis variantu;
-    // lower = menej je lepšie (čas), fmt = zobrazenie výsledku, random = varianty bez poradia
-    const L = Brain.L;
-    const V = (prefix, list) => list.map(([v, l]) => ({ k: prefix + v, l }));
-    const LVL = [["easy", L("ľahké", "lehké", "easy")], ["mid", L("stredné", "střední", "medium")], ["hard", L("ťažké", "těžké", "hard")]];
-    const OPS = [["add", "+"], ["sub", "−"], ["mul", "×"], ["div", "÷"], ["mix", "Mix"]];
-    const RETAZ = [];
-    for (const [d, dl] of [["easy", L("do 50", "do 50", "to 50")], ["mid", L("do 100", "do 100", "to 100")], ["hard", L("do 300", "do 300", "to 300")]])
-      for (const [sp, sl] of [["slow", L("pomaly", "pomalu", "slow")], ["mid", L("stredne", "středně", "medium")], ["fast", L("rýchlo", "rychle", "fast")]])
-        RETAZ.push([`${d}.${sp}`, { sk: `${dl.sk} · ${sl.sk}`, cs: `${dl.cs} · ${sl.cs}`, en: `${dl.en} · ${sl.en}` }]);
-    const TRIKY = [["x11", "× 11"], ["x5", "× 5"], ["x9", "× 9"], ["x25", "× 25"], ["sq5", L("Mocnina …5", "Mocnina …5", "Squares of …5")],
-      ["half", L("Polovica × dvojnásobok", "Polovina × dvojnásobek", "Halve & double")], ["round", L("Zaokrúhli a oprav", "Zaokrouhli a oprav", "Round & fix")],
-      ["k1000", L("1000 − číslo", "1000 − číslo", "1000 − number")], ["pct", L("Percentá cez 10 %", "Procenta přes 10 %", "Percent via 10%")],
-      ["near100", L("Čísla blízko 100", "Čísla blízko 100", "Near 100")], ["mix", L("Mix všetkých", "Mix všech", "Mix of all")]];
-    const SIZES = list => list.map(n => [n, `${n}×${n}`]);
-    const pct = s => Brain.num(s) + " %";
+    // Hra: variants = varianty (kľúče tabuliek) od najľahšieho po najťažší, label = popis variantu;
+    // lower = menej je lepšie (čas), format = zobrazenie výsledku, random = varianty bez poradia náročnosti
+    const localized = Brain.localized;
+    const variants = (keyPrefix, options) => options.map(([value, label]) => ({ key: keyPrefix + value, label }));
+    const LEVELS = [["easy", localized("ľahké", "lehké", "easy")], ["mid", localized("stredné", "střední", "medium")], ["hard", localized("ťažké", "těžké", "hard")]];
+    const OPERATIONS = [["add", "+"], ["sub", "−"], ["mul", "×"], ["div", "÷"], ["mix", "Mix"]];
+    const CHAIN_RANGES = [["easy", localized("do 50", "do 50", "to 50")], ["mid", localized("do 100", "do 100", "to 100")], ["hard", localized("do 300", "do 300", "to 300")]];
+    const CHAIN_PACES = [["slow", localized("pomaly", "pomalu", "slow")], ["mid", localized("stredne", "středně", "medium")], ["fast", localized("rýchlo", "rychle", "fast")]];
+    const joinLabels = (a, b) => ({ sk: `${a.sk} · ${b.sk}`, cs: `${a.cs} · ${b.cs}`, en: `${a.en} · ${b.en}` });
+    const CHAIN_OPTIONS = CHAIN_RANGES.flatMap(([range, rangeLabel]) =>
+      CHAIN_PACES.map(([pace, paceLabel]) => [`${range}.${pace}`, joinLabels(rangeLabel, paceLabel)]));
+    const TRICKS = [["x11", "× 11"], ["x5", "× 5"], ["x9", "× 9"], ["x25", "× 25"], ["sq5", localized("Mocnina …5", "Mocnina …5", "Squares of …5")],
+      ["half", localized("Polovica × dvojnásobok", "Polovina × dvojnásobek", "Halve & double")], ["round", localized("Zaokrúhli a oprav", "Zaokrouhli a oprav", "Round & fix")],
+      ["k1000", localized("1000 − číslo", "1000 − číslo", "1000 − number")], ["pct", localized("Percentá cez 10 %", "Procenta přes 10 %", "Percent via 10%")],
+      ["near100", localized("Čísla blízko 100", "Čísla blízko 100", "Near 100")], ["mix", localized("Mix všetkých", "Mix všech", "Mix of all")]];
+    const gridSizes = sizes => sizes.map(n => [n, `${n}×${n}`]);
+    const formatPercent = score => Brain.formatNumber(score) + " %";
     const GAMES = {
       math: [
-        { href: "rychle/", ico: "⚡", vars: V("rychle.", OPS),
-          t: { sk: "Rýchle počty", cs: "Rychlé počty", en: "Speed arithmetic" },
-          d: { sk: "60 sekúnd, +−×÷, obtiažnosť sa prispôsobí", cs: "60 sekund, +−×÷, obtížnost se přizpůsobí", en: "60 seconds, +−×÷, adaptive difficulty" } },
-        { href: "retaz/", ico: "🔗", vars: V("retaz.", RETAZ),
-          t: { sk: "Reťazové počty", cs: "Řetězové počty", en: "Chain arithmetic" },
-          d: { sk: "Počítaj v hlave krok za krokom", cs: "Počítej v hlavě krok za krokem", en: "Keep a running total in your head" } },
-        { href: "odhad/", ico: "🎯", vars: V("odhad.", [["calc", L("počty", "počty", "calculations")], ["life", L("zo života", "ze života", "everyday")], ["all", L("všetko", "vše", "all")]]),
-          t: { sk: "Odhad", cs: "Odhad", en: "Estimation" },
-          d: { sk: "Približne a rýchlo: súčiny, percentá, kurz", cs: "Přibližně a rychle: součiny, procenta, kurz", en: "Quick and close: products, percentages, FX" } },
-        { href: "ciel/", ico: "🏁", vars: V("ciel.", LVL),
-          t: { sk: "Dosiahni cieľ", cs: "Dosáhni cíle", en: "Hit the target" },
-          d: { sk: "Z daných čísel poskladaj cieľové číslo", cs: "Z daných čísel slož cílové číslo", en: "Combine the numbers to reach the target" } },
-        { href: "triky/", ico: "🪄", vars: V("triky.", TRIKY), random: true, fmt: s => s + "/10",
-          t: { sk: "Triky z hlavy", cs: "Triky z hlavy", en: "Mental math tricks" },
-          d: { sk: "×11, ×5, ×25, mocniny, percentá…", cs: "×11, ×5, ×25, mocniny, procenta…", en: "×11, ×5, ×25, squares, percentages…" } },
-        { href: "nasobilka/", ico: "✖️", vars: V("nasobilka.", [10, 12, 15, 20].map(n => [n, L(`do ${n}`, `do ${n}`, `to ${n}`)])), fmt: Brain.okTime(20).fmt,
-          t: { sk: "Násobilka do 20", cs: "Násobilka do 20", en: "Times tables to 20" },
-          d: { sk: "Opakuje častejšie to, čo nevieš", cs: "Opakuje častěji to, co nevíš", en: "Repeats what you miss more often" } },
-        { href: "percenta/", ico: "％", vars: [{ k: "percenta" }], fmt: s => s + "/10",
-          t: { sk: "Percentá a úroky", cs: "Procenta a úroky", en: "Percentages & interest" },
-          d: { sk: "Zľavy, DPH, zmena v %, zložené úročenie", cs: "Slevy, DPH, změna v %, složené úročení", en: "Discounts, VAT, % change, compounding" } },
+        { href: "rychle/", icon: "⚡", variants: variants("rychle.", OPERATIONS),
+          title: { sk: "Rýchle počty", cs: "Rychlé počty", en: "Speed arithmetic" },
+          description: { sk: "60 sekúnd, +−×÷, obtiažnosť sa prispôsobí", cs: "60 sekund, +−×÷, obtížnost se přizpůsobí", en: "60 seconds, +−×÷, adaptive difficulty" } },
+        { href: "retaz/", icon: "🔗", variants: variants("retaz.", CHAIN_OPTIONS),
+          title: { sk: "Reťazové počty", cs: "Řetězové počty", en: "Chain arithmetic" },
+          description: { sk: "Počítaj v hlave krok za krokom", cs: "Počítej v hlavě krok za krokem", en: "Keep a running total in your head" } },
+        { href: "odhad/", icon: "🎯", variants: variants("odhad.", [["calc", localized("počty", "počty", "calculations")], ["life", localized("zo života", "ze života", "everyday")], ["all", localized("všetko", "vše", "all")]]),
+          title: { sk: "Odhad", cs: "Odhad", en: "Estimation" },
+          description: { sk: "Približne a rýchlo: súčiny, percentá, kurz", cs: "Přibližně a rychle: součiny, procenta, kurz", en: "Quick and close: products, percentages, FX" } },
+        { href: "ciel/", icon: "🏁", variants: variants("ciel.", LEVELS),
+          title: { sk: "Dosiahni cieľ", cs: "Dosáhni cíle", en: "Hit the target" },
+          description: { sk: "Z daných čísel poskladaj cieľové číslo", cs: "Z daných čísel slož cílové číslo", en: "Combine the numbers to reach the target" } },
+        { href: "triky/", icon: "🪄", variants: variants("triky.", TRICKS), random: true, format: correct => correct + "/10",
+          title: { sk: "Triky z hlavy", cs: "Triky z hlavy", en: "Mental math tricks" },
+          description: { sk: "×11, ×5, ×25, mocniny, percentá…", cs: "×11, ×5, ×25, mocniny, procenta…", en: "×11, ×5, ×25, squares, percentages…" } },
+        { href: "nasobilka/", icon: "✖️", variants: variants("nasobilka.", [10, 12, 15, 20].map(n => [n, localized(`do ${n}`, `do ${n}`, `to ${n}`)])), format: Brain.scoreWithTime(20).format,
+          title: { sk: "Násobilka do 20", cs: "Násobilka do 20", en: "Times tables to 20" },
+          description: { sk: "Opakuje častejšie to, čo nevieš", cs: "Opakuje častěji to, co nevíš", en: "Repeats what you miss more often" } },
+        { href: "percenta/", icon: "％", variants: [{ key: "percenta" }], format: correct => correct + "/10",
+          title: { sk: "Percentá a úroky", cs: "Procenta a úroky", en: "Percentages & interest" },
+          description: { sk: "Zľavy, DPH, zmena v %, zložené úročenie", cs: "Slevy, DPH, změna v %, složené úročení", en: "Discounts, VAT, % change, compounding" } },
       ],
       focus: [
-        { href: "sart/", ico: "🛑", vars: V("sart.", [["short", L("krátka", "krátká", "short")], ["full", L("plná", "plná", "full")]]), fmt: pct,
-          t: { sk: "Nestlač trojku", cs: "Nemačkej trojku", en: "Don't press 3" },
-          d: { sk: "Stláčaj stále, len pri 3 nie – chyby z autopilota", cs: "Mačkej pořád, jen u 3 ne – chyby z autopilota", en: "Press for every digit except 3 – autopilot errors" } },
-        { href: "kontrolor/", ico: "🔍", vars: V("kontrolor.", LVL), fmt: pct,
-          t: { sk: "Kontrolór", cs: "Kontrolor", en: "Checker" },
-          d: { sk: "Nájdi chyby v hotových výpočtoch", cs: "Najdi chyby v hotových výpočtech", en: "Spot mistakes in worked problems" } },
-        { href: "rychle/", ico: "🎯", vars: V("rychle.acc.", OPS), preset: "acc",
-          t: { sk: "Rýchle počty: presnosť", cs: "Rychlé počty: přesnost", en: "Arithmetic: accuracy" },
-          d: { sk: "Bez času, prvá chyba končí – najdlhšia séria", cs: "Bez času, první chyba končí – nejdelší série", en: "No clock, first mistake ends it – longest streak" } },
+        { href: "sart/", icon: "🛑", variants: variants("sart.", [["short", localized("krátka", "krátká", "short")], ["full", localized("plná", "plná", "full")]]), format: formatPercent,
+          title: { sk: "Nestlač trojku", cs: "Nemačkej trojku", en: "Don't press 3" },
+          description: { sk: "Stláčaj stále, len pri 3 nie – chyby z autopilota", cs: "Mačkej pořád, jen u 3 ne – chyby z autopilota", en: "Press for every digit except 3 – autopilot errors" } },
+        { href: "kontrolor/", icon: "🔍", variants: variants("kontrolor.", LEVELS), format: formatPercent,
+          title: { sk: "Kontrolór", cs: "Kontrolor", en: "Checker" },
+          description: { sk: "Nájdi chyby v hotových výpočtoch", cs: "Najdi chyby v hotových výpočtech", en: "Spot mistakes in worked problems" } },
+        { href: "rychle/", icon: "🎯", variants: variants("rychle.acc.", OPERATIONS), preset: "acc",
+          title: { sk: "Rýchle počty: presnosť", cs: "Rychlé počty: přesnost", en: "Arithmetic: accuracy" },
+          description: { sk: "Bez času, prvá chyba končí – najdlhšia séria", cs: "Bez času, první chyba končí – nejdelší série", en: "No clock, first mistake ends it – longest streak" } },
       ],
       mind: [
-        { href: "nback/", ico: "🔲", vars: V("nback.", [["single", L("pozícia", "pozice", "position")], ["dual", L("pozícia + písmeno", "pozice + písmeno", "position + letter")]]), fmt: s => "N = " + s,
-          t: { sk: "N-back", cs: "N-back", en: "N-back" },
-          d: { sk: "Pracovná pamäť: bolo to pred N krokmi?", cs: "Pracovní paměť: bylo to před N kroky?", en: "Working memory: was it N steps ago?" } },
-        { href: "cisla/", ico: "🔢", vars: V("cisla.", [["fwd", L("dopredu", "dopředu", "forwards")], ["bwd", L("odzadu", "pozpátku", "backwards")]]),
-          t: { sk: "Pamäť čísel", cs: "Paměť čísel", en: "Digit span" },
-          d: { sk: "Zapamätaj si rad číslic (aj odzadu)", cs: "Zapamatuj si řadu číslic (i pozpátku)", en: "Remember the digits (also backwards)" } },
-        { href: "schulte/", ico: "👁️", vars: V("schulte.", SIZES([3, 4, 5, 6])), lower: true, fmt: Brain.secs,
-          t: { sk: "Schulteho tabuľka", cs: "Schulteho tabulka", en: "Schulte table" },
-          d: { sk: "Nájdi čísla po poradí čo najrýchlejšie", cs: "Najdi čísla popořadě co nejrychleji", en: "Find the numbers in order, fast" } },
-        { href: "stroop/", ico: "🎨", vars: V("stroop.", [["ink", L("farba písma", "barva písma", "ink colour")], ["switch", L("prepínanie", "přepínání", "switching")]]),
-          t: { sk: "Stroop", cs: "Stroop", en: "Stroop" },
-          d: { sk: "Farba písma, nie slovo", cs: "Barva písma, ne slovo", en: "The ink colour, not the word" } },
-        { href: "kalkudoku/", ico: "🧮", vars: V("kalkudoku.", SIZES([4, 5, 6])), lower: true, fmt: Brain.secs,
-          t: { sk: "Kalkudoku", cs: "Kalkudoku", en: "Calcudoku" },
-          d: { sk: "Sudoku so súčtami a súčinmi", cs: "Sudoku se součty a součiny", en: "Sudoku with sums and products" } },
+        { href: "nback/", icon: "🔲", variants: variants("nback.", [["single", localized("pozícia", "pozice", "position")], ["dual", localized("pozícia + písmeno", "pozice + písmeno", "position + letter")]]), format: level => "N = " + level,
+          title: { sk: "N-back", cs: "N-back", en: "N-back" },
+          description: { sk: "Pracovná pamäť: bolo to pred N krokmi?", cs: "Pracovní paměť: bylo to před N kroky?", en: "Working memory: was it N steps ago?" } },
+        { href: "cisla/", icon: "🔢", variants: variants("cisla.", [["fwd", localized("dopredu", "dopředu", "forwards")], ["bwd", localized("odzadu", "pozpátku", "backwards")]]),
+          title: { sk: "Pamäť čísel", cs: "Paměť čísel", en: "Digit span" },
+          description: { sk: "Zapamätaj si rad číslic (aj odzadu)", cs: "Zapamatuj si řadu číslic (i pozpátku)", en: "Remember the digits (also backwards)" } },
+        { href: "schulte/", icon: "👁️", variants: variants("schulte.", gridSizes([3, 4, 5, 6])), lower: true, format: Brain.formatSeconds,
+          title: { sk: "Schulteho tabuľka", cs: "Schulteho tabulka", en: "Schulte table" },
+          description: { sk: "Nájdi čísla po poradí čo najrýchlejšie", cs: "Najdi čísla popořadě co nejrychleji", en: "Find the numbers in order, fast" } },
+        { href: "stroop/", icon: "🎨", variants: variants("stroop.", [["ink", localized("farba písma", "barva písma", "ink colour")], ["switch", localized("prepínanie", "přepínání", "switching")]]),
+          title: { sk: "Stroop", cs: "Stroop", en: "Stroop" },
+          description: { sk: "Farba písma, nie slovo", cs: "Barva písma, ne slovo", en: "The ink colour, not the word" } },
+        { href: "kalkudoku/", icon: "🧮", variants: variants("kalkudoku.", gridSizes([4, 5, 6])), lower: true, format: Brain.formatSeconds,
+          title: { sk: "Kalkudoku", cs: "Kalkudoku", en: "Calcudoku" },
+          description: { sk: "Sudoku so súčtami a súčinmi", cs: "Sudoku se součty a součiny", en: "Sudoku with sums and products" } },
       ],
     };
 
@@ -166,7 +167,7 @@
 
     // Počet dní v rade so splneným denným tréningom (dnešok sa ráta, keď je hotový).
     function streak() {
-      const done = Brain.load("dailyDone", {});
+      const done = Brain.loadPlayer("dailyDone", {});
       const d = new Date();
       if (!done[Brain.today(d)]) d.setDate(d.getDate() - 1);
       let n = 0;
@@ -174,72 +175,76 @@
       return n;
     }
 
-    document.title = t(PAGE.docTitle);
-    document.getElementById("title").textContent = t(PAGE.title);
-    document.getElementById("sub").textContent = t(Brain.cloudOn() ? PAGE.subCloud : PAGE.sub);
-    document.getElementById("dailyT").textContent = t(PAGE.dailyT);
-    document.getElementById("dailyD").textContent = t(PAGE.dailyD);
-    document.getElementById("hMath").textContent = t(PAGE.math);
-    document.getElementById("hMind").textContent = t(PAGE.mind);
-    document.getElementById("hFocus").textContent = t(PAGE.focus);
-    document.getElementById("streak").innerHTML = `<b>${streak()}</b>${t(PAGE.days)}`;
+    document.title = translate(PAGE.docTitle);
+    document.getElementById("title").textContent = translate(PAGE.title);
+    document.getElementById("sub").textContent = translate(Brain.cloudOn() ? PAGE.subCloud : PAGE.sub);
+    document.getElementById("dailyT").textContent = translate(PAGE.dailyT);
+    document.getElementById("dailyD").textContent = translate(PAGE.dailyD);
+    document.getElementById("hMath").textContent = translate(PAGE.math);
+    document.getElementById("hMind").textContent = translate(PAGE.mind);
+    document.getElementById("hFocus").textContent = translate(PAGE.focus);
+    document.getElementById("streak").innerHTML = `<b>${streak()}</b>${translate(PAGE.days)}`;
 
+    // Výsledky hráča vo variante: zoradená tabuľka, moja priečka (null = nehral) a môj výsledok.
+    function variantStanding(game, variant, boards, player) {
+      const scores = boards[variant.key] || {};
+      const ranking = Object.entries(scores).sort((a, b) => (game.lower ? a[1] - b[1] : b[1] - a[1]));
+      const isBetter = score => (game.lower ? score < scores[player] : score > scores[player]);
+      const place = player in scores ? 1 + ranking.filter(([, score]) => isBetter(score)).length : null;
+      return { variant, ranking, place, myScore: scores[player] };
+    }
     // Ktorý variant ukázať na karte: kde som prvý → najťažší taký (pri hrách bez poradia
     // náročnosti náhodný, počas návštevy stránky stále ten istý); inak variant s mojou
     // najlepšou priečkou (pri zhode ťažší); keď som hru nehral → najhranejší variant.
-    const randomPick = new Map();
-    function pick(g, boards, me) {
-      const rows = g.vars.map(v => {
-        const lb = boards[v.k] || {};
-        const all = Object.entries(lb).sort((a, b) => (g.lower ? a[1] - b[1] : b[1] - a[1]));
-        const place = me in lb ? 1 + all.filter(([, s]) => (g.lower ? s < lb[me] : s > lb[me])).length : null;
-        return { v, all, place, my: lb[me] };
-      }).filter(r => r.all.length);
-      if (!rows.length) return null;
-      const first = rows.filter(r => r.place === 1);
-      if (first.length) {
-        if (!g.random) return first[first.length - 1];
-        const keep = first.find(r => r.v.k === randomPick.get(g));
-        const r = keep || Brain.pick(first);
-        randomPick.set(g, r.v.k);
-        return r;
+    const randomChoice = new Map();
+    function chooseVariant(game, boards, player) {
+      const played = game.variants.map(variant => variantStanding(game, variant, boards, player)).filter(s => s.ranking.length);
+      if (!played.length) return null;
+      const leading = played.filter(s => s.place === 1);
+      if (leading.length) {
+        if (!game.random) return leading[leading.length - 1];
+        const chosen = leading.find(s => s.variant.key === randomChoice.get(game)) || Brain.pick(leading);
+        randomChoice.set(game, chosen.variant.key);
+        return chosen;
       }
-      const played = rows.filter(r => r.place !== null);
-      if (played.length) return played.reduce((a, b) => (b.place <= a.place ? b : a));
-      return rows.reduce((a, b) => (b.all.length >= a.all.length ? b : a));
+      const mine = played.filter(s => s.place !== null);
+      if (mine.length) return mine.reduce((best, s) => (s.place <= best.place ? s : best));
+      return played.reduce((most, s) => (s.ranking.length >= most.ranking.length ? s : most));
     }
     // Variant, líder (🥇) a pod ním moja priečka, keď nie som prvý.
-    function stats(g, boards) {
-      const me = Brain.user(), r = pick(g, boards, me), fmt = g.fmt || Brain.num;
-      if (!r) return "";
-      const [ln, ls] = r.place === 1 ? [me, r.my] : r.all[0];
-      return (r.v.l ? `<span class="v">${Brain.esc(t(r.v.l))}</span>` : "") +
-        `<span class="lead${ln === me ? " me" : ""}">🥇 ${Brain.esc(ln)} · ${fmt(ls)}</span>` +
-        (r.place > 1 ? `<span class="mine">${t(PAGE.place)(r.place)} · ${fmt(r.my)}</span>` : "");
+    function cardStatsHtml(game, boards) {
+      const player = Brain.user(), standing = chooseVariant(game, boards, player);
+      if (!standing) return "";
+      const format = game.format || Brain.formatNumber;
+      const [leader, leaderScore] = standing.place === 1 ? [player, standing.myScore] : standing.ranking[0];
+      const label = standing.variant.label ? `<span class="v">${Brain.escapeHtml(translate(standing.variant.label))}</span>` : "";
+      const leaderLine = `<span class="lead${leader === player ? " me" : ""}">🥇 ${Brain.escapeHtml(leader)} · ${format(leaderScore)}</span>`;
+      const myLine = standing.place > 1 ? `<span class="mine">${translate(PAGE.place)(standing.place)} · ${format(standing.myScore)}</span>` : "";
+      return label + leaderLine + myLine;
     }
 
     const cards = [];
-    for (const [section, list] of Object.entries(GAMES)) {
+    for (const [section, games] of Object.entries(GAMES)) {
       const box = document.getElementById(section);
-      for (const g of list) {
-        const a = document.createElement("a");
-        a.className = "game";
-        a.href = g.href;
+      for (const game of games) {
+        const card = document.createElement("a");
+        card.className = "game";
+        card.href = game.href;
         // karta s predvoleným režimom (presnosť v Rýchlych počtoch) ho pred otvorením nastaví
-        if (g.preset) a.addEventListener("click", () => Brain.save("opt.rychle.style", g.preset));
-        else if (g.href === "rychle/") a.addEventListener("click", () => Brain.save("opt.rychle.style", "speed"));
-        a.innerHTML = `<span class="ico">${g.ico}</span>` +
-          `<span class="t">${t(g.t)}</span><span class="d">${t(g.d)}</span><span class="b"></span>`;
-        box.appendChild(a);
-        cards.push([g, a.querySelector(".b")]);
+        if (game.preset) card.addEventListener("click", () => Brain.savePlayer("opt.rychle.style", game.preset));
+        else if (game.href === "rychle/") card.addEventListener("click", () => Brain.savePlayer("opt.rychle.style", "speed"));
+        card.innerHTML = `<span class="ico">${game.icon}</span>` +
+          `<span class="t">${translate(game.title)}</span><span class="d">${translate(game.description)}</span><span class="b"></span>`;
+        box.appendChild(card);
+        cards.push({ game, stats: card.querySelector(".b") });
       }
     }
     // najprv údaje z tohto zariadenia, potom spoločná tabuľka zo servera
-    const spec = {};
-    for (const [g] of cards) for (const v of g.vars) spec[v.k] = !!g.lower;
-    const show = boards => { for (const [g, el] of cards) el.innerHTML = stats(g, boards); };
-    Brain.allBoards(spec, { online: false }).then(show);
-    if (Brain.cloudOn()) Brain.allBoards(spec).then(show, () => {});
+    const lowerByGame = {};
+    for (const { game } of cards) for (const variant of game.variants) lowerByGame[variant.key] = !!game.lower;
+    const showStats = boards => { for (const { game, stats } of cards) stats.innerHTML = cardStatsHtml(game, boards); };
+    Brain.loadBoards(lowerByGame, { online: false }).then(showStats);
+    if (Brain.cloudOn()) Brain.loadBoards(lowerByGame).then(showStats, () => { /* bez spojenia ostanú údaje zo zariadenia */ });
 
     // Odkaz na domáci rozcestník len na lokálnom serveri.
     if (location.hostname === "localhost" || /^\d+\.\d+\.\d+\.\d+$/.test(location.hostname)) {

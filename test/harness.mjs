@@ -47,7 +47,7 @@ export function loadGame(gameDir, opts = {}) {
   const store = new Map([["lang", lang], ...Object.entries(preset)]);
   const ctx = {
     console,
-    setTimeout, clearTimeout, setInterval, clearInterval,
+    setTimeout, clearTimeout, setInterval, clearInterval, AbortController,
     Promise, Math: random ? Object.create(Math, { random: { value: random } }) : Math,
     JSON, Object, Array, String, Number, Set, Map, Date, RegExp, Error,
     document: doc,

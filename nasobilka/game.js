@@ -5,8 +5,8 @@ const SESSION = 20;
 const RANGES = [10, 12, 15, 20];
 const WEIGHT = [6, 16, 8, 4, 2, 1];  // index = krabička, 0 = ešte nevidené
 const FAST = 4000;
-const L = Brain.L;
-const $ = id => document.getElementById(id);
+const localized = Brain.localized;
+const byId = id => document.getElementById(id);
 
 const factKey = (a, b) => `${Math.min(a, b)}x${Math.max(a, b)}`;
 function facts(max) {
@@ -45,60 +45,43 @@ function heatmap(max, boxes) {
     const bx = boxes[factKey(a, b)] || 0;
     h += `<i class="b${bx}" title="${a} × ${b} = ${a * b}"></i>`;
   }
-  h += `</div><div class="legend muted"><i class="b0"></i>${t(L("nové", "nové", "new"))} <i class="b1"></i>${t(L("neviem", "nevím", "unknown"))} <i class="b3"></i>${t(L("učím sa", "učím se", "learning"))} <i class="b5"></i>${t(L("viem", "umím", "known"))}</div>`;
+  h += `</div><div class="legend muted"><i class="b0"></i>${translate(localized("nové", "nové", "new"))} <i class="b1"></i>${translate(localized("neviem", "nevím", "unknown"))} <i class="b3"></i>${translate(localized("učím sa", "učím se", "learning"))} <i class="b5"></i>${translate(localized("viem", "umím", "known"))}</div>`;
   return h;
 }
 const mastered = (list, boxes) => list.filter(k => (boxes[k] || 0) >= 4).length;
 
 // Výsledok do tabuľky: najprv počet správnych, pri zhode kratší celkový čas kola
-// (jedno číslo, kódovanie v Brain.okTime – vie ho zobraziť aj úvodná stránka).
-const OT = Brain.okTime(SESSION);
-const encode = OT.encode;
-const decode = OT.decode;
-const fmtScore = OT.fmt;
+// (jedno číslo, viď Brain.scoreWithTime – vie ho zobraziť aj úvodná stránka).
+const SCORE = Brain.scoreWithTime(SESSION);
+const encode = SCORE.encode;
+const decode = SCORE.decode;
+const formatScore = SCORE.format;
 // Staré výsledky (len počet správnych) prevedie na nový formát s neznámym časom.
-function migrate() {
-  const up = OT.upgrade;
-  for (const v of RANGES) {
-    const k = "nasobilka." + v;
-    const b = Brain.best(k);
-    if (b !== null && b !== up(b)) Brain.save("best." + k, up(b));
-    const h = Brain.history(k);
-    if (h.some(x => x.s !== up(x.s))) Brain.save("h." + k, h.map(x => ({ ...x, s: up(x.s) })));
-    // prevedené rekordy zariadenia idú aj na server (prepíšu tam starý formát)
-    const lb = Brain.gload("lb." + k, {}), q = Brain.gload("lbq", {});
-    const old = Object.keys(lb).filter(n => lb[n] !== up(lb[n]));
-    if (old.length) {
-      q[k] = q[k] || {};
-      for (const n of old) q[k][n] = lb[n] = up(lb[n]);
-      Brain.gsave("lb." + k, lb);
-    }
-    if (q[k]) for (const n in q[k]) q[k][n] = up(q[k][n]);
-    Brain.gsave("lbq", q);
-  }
+function upgradeOldScores() {
+  for (const max of RANGES) Brain.convertScores("nasobilka." + max, SCORE.upgradeOldFormat);
 }
 
 function showIntro() {
-  const boxes = Brain.load("leitner", {}), list = facts(range.value);
+  const boxes = Brain.loadPlayer("leitner", {}), list = facts(range.value);
   Brain.intro(ui.main, {
     key: "nasobilka." + range.value,
-    desc: L(
+    desc: localized(
       `${SESSION} príkladov z násobilky do ${range.value}. Častejšie prídu tie, ktoré nevieš alebo dlho trváš. Zvládnuté: ${mastered(list, boxes)}/${list.length}.`,
       `${SESSION} příkladů z násobilky do ${range.value}. Častěji přijdou ty, které nevíš nebo ti trvají. Zvládnuté: ${mastered(list, boxes)}/${list.length}.`,
       `${SESSION} problems from the tables up to ${range.value}. The ones you miss or are slow on come up more often. Mastered: ${mastered(list, boxes)}/${list.length}.`),
     extra: heatmap(range.value, boxes),
-    fmt: fmtScore,
+    fmt: formatScore,
     onStart: play,
   });
 }
 
 function play() {
   Brain.playing(true);
-  const boxes = Brain.load("leitner", {}), list = facts(range.value);
+  const boxes = Brain.loadPlayer("leitner", {}), list = facts(range.value);
   const requeue = [];  // [index otázky, kľúč] – chybné príklady sa vrátia o 3 otázky
   let i = 0, score = 0, cur = null, shownAt = 0, miss = false, totalMs = 0;
   ui.main.innerHTML = `
-    <div class="statline"><span><b id="i">1</b>/${SESSION}</span><span>✔ <b id="sc">0</b></span><span>⏱ <b id="tm">${Brain.secs(0)}</b></span></div>
+    <div class="statline"><span><b id="i">1</b>/${SESSION}</span><span>✔ <b id="sc">0</b></span><span>⏱ <b id="tm">${Brain.formatSeconds(0)}</b></span></div>
     <div class="big" id="q"></div>`;
   const pad = Brain.numpad(ui.main, {
     onInput: v => { if (v === cur.ans) answer(true); },
@@ -112,8 +95,8 @@ function play() {
     const [x, y] = Math.random() < 0.5 ? [a, b] : [b, a];
     cur = { key, ans: a * b, text: `${x} × ${y}` };
     miss = false; shownAt = Date.now();
-    $("i").textContent = i + 1;
-    $("q").textContent = cur.text;
+    byId("i").textContent = i + 1;
+    byId("q").textContent = cur.text;
     pad.clear();
   }
   function answer(ok) {
@@ -127,23 +110,23 @@ function play() {
       return;
     }
     if (!miss) { score++; boxes[cur.key] = nextBox(boxes[cur.key], true, ms); totalMs += ms; }
-    $("sc").textContent = score;
+    byId("sc").textContent = score;
     pad.flash("right");
     i++;
     next();
   }
   // celkový čas kola od prvého príkladu po poslednú odpoveď (aj s chybami)
-  const stopClock = Brain.stopwatch(ms => { $("tm").textContent = Brain.secs(ms); });
+  const stopRoundClock = Brain.stopwatch(ms => { byId("tm").textContent = Brain.formatSeconds(ms); });
   function finish() {
-    const roundMs = stopClock();
-    Brain.save("leitner", boxes);
+    const roundMs = stopRoundClock();
+    Brain.savePlayer("leitner", boxes);
     Brain.result(ui.main, {
       key: "nasobilka." + range.value, score: encode(score, roundMs),
-      fmt: fmtScore,
-      label: L("Správne na prvý pokus · celkový čas", "Správně na první pokus · celkový čas", "Right on the first try · total time"),
+      fmt: formatScore,
+      label: localized("Správne na prvý pokus · celkový čas", "Správně na první pokus · celkový čas", "Right on the first try · total time"),
       lines: [
-        L(`Zvládnuté príklady: ${mastered(list, boxes)}/${list.length}`, `Zvládnuté příklady: ${mastered(list, boxes)}/${list.length}`, `Mastered facts: ${mastered(list, boxes)}/${list.length}`),
-        L(`Priemerný čas správnej odpovede: ${Brain.secs(score ? totalMs / score : 0)}`, `Průměrný čas správné odpovědi: ${Brain.secs(score ? totalMs / score : 0)}`, `Average time per correct answer: ${Brain.secs(score ? totalMs / score : 0)}`),
+        localized(`Zvládnuté príklady: ${mastered(list, boxes)}/${list.length}`, `Zvládnuté příklady: ${mastered(list, boxes)}/${list.length}`, `Mastered facts: ${mastered(list, boxes)}/${list.length}`),
+        localized(`Priemerný čas správnej odpovede: ${Brain.formatSeconds(score ? totalMs / score : 0)}`, `Průměrný čas správné odpovědi: ${Brain.formatSeconds(score ? totalMs / score : 0)}`, `Average time per correct answer: ${Brain.formatSeconds(score ? totalMs / score : 0)}`),
         heatmap(range.value, boxes),
       ],
       onAgain: play,
@@ -152,5 +135,5 @@ function play() {
   next();
 }
 
-migrate();
+upgradeOldScores();
 showIntro();

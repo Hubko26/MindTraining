@@ -18,46 +18,46 @@ const Brain = (() => {
   // admin = meno hráča, ktorému sa v tabuľke ukážu tlačidlá 🗑. Meno samo nič nechráni –
   // mazanie povolia pravidlá Firestore len so správnym heslom (heslo je len v pravidlách).
   const CLOUD = { projectId: "mindtraining-8a94a", apiKey: "AIzaSyDuF1cY5_CKn2cn7IwnK16itdI4KaZ5hGc", admin: "Hubko" };
-  const L = (sk, cs, en) => ({ sk, cs, en });
-  const S = {
-    start: L("Štart ▶", "Start ▶", "Start ▶"),
-    again: L("Znova", "Znovu", "Again"),
-    best: L("Rekord:", "Rekord:", "Best:"),
-    noBest: L("Zatiaľ bez výsledku", "Zatím bez výsledku", "No results yet"),
-    newBest: L("🏆 Nový rekord!", "🏆 Nový rekord!", "🏆 New best!"),
-    result: L("Výsledok", "Výsledek", "Result"),
-    back: L("← Tréning mysle", "← Trénink mysli", "← Brain training"),
-    backDaily: L("← Denný tréning", "← Denní trénink", "← Daily workout"),
-    home: L("← Hry", "← Hry", "← Games"),
-    homeDaily: L("← Tréning", "← Trénink", "← Workout"),
-    nextDaily: L("Ďalšia hra ▶", "Další hra ▶", "Next game ▶"),
-    dailyDone: L("Denný tréning hotový ✅", "Denní trénink hotový ✅", "Daily workout done ✅"),
-    daily: L("Denný tréning", "Denní trénink", "Daily workout"),
-    next: L("Ďalej ▶", "Dále ▶", "Next ▶"),
-    board: L("Najlepšie výkony", "Nejlepší výkony", "Leaderboard"),
-    boardEmpty: L("Zatiaľ nikto. Buď prvý!", "Zatím nikdo. Buď první!", "No one yet. Be the first!"),
-    who: L("Kto hrá?", "Kdo hraje?", "Who's playing?"),
-    whyName: L("Meno sa ukáže v tabuľke najlepších výkonov. Výsledky sa ukladajú v tomto prehliadači.", "Jméno se ukáže v tabulce nejlepších výkonů. Výsledky se ukládají v tomto prohlížeči.", "Your name appears on the leaderboard. Results are stored in this browser."),
-    whyNameCloud: L("Meno sa ukáže v spoločnej tabuľke najlepších výkonov – vidia ju všetci hráči.", "Jméno se ukáže ve společné tabulce nejlepších výkonů – vidí ji všichni hráči.", "Your name appears on the shared leaderboard that all players see."),
-    netLocal: L("📱 Len hráči z tohto zariadenia", "📱 Jen hráči z tohoto zařízení", "📱 Players on this device only"),
-    netSync: L("🌐 Načítavam…", "🌐 Načítám…", "🌐 Loading…"),
-    netOn: L("🌐 Spoločná tabuľka", "🌐 Společná tabulka", "🌐 Shared leaderboard"),
-    netOff: L("⚠️ Bez spojenia – len toto zariadenie", "⚠️ Bez připojení – jen toto zařízení", "⚠️ Offline – this device only"),
-    namePh: L("Tvoje meno", "Tvoje jméno", "Your name"),
-    nameReq: L("Zadaj meno.", "Zadej jméno.", "Please enter a name."),
-    play: L("Hrať ▶", "Hrát ▶", "Play ▶"),
-    cancel: L("Zrušiť", "Zrušit", "Cancel"),
-    del: L("Zmazať výsledok", "Smazat výsledek", "Delete result"),
-    delAsk: L("Zmazať z tabuľky výsledok hráča", "Smazat z tabulky výsledek hráče", "Delete the leaderboard result of"),
-    delFail: L("⚠️ Mazanie sa nepodarilo", "⚠️ Smazání se nepodařilo", "⚠️ Delete failed"),
-    adminTitle: L("🔑 Heslo správcu", "🔑 Heslo správce", "🔑 Admin password"),
-    adminWhy: L("Mazať výsledky smie len správca. Heslo sa zapamätá v tomto prehliadači.", "Mazat výsledky smí jen správce. Heslo se zapamatuje v tomto prohlížeči.", "Only the admin can delete results. The password is remembered in this browser."),
-    passPh: L("Heslo", "Heslo", "Password"),
-    passOk: L("Zmazať", "Smazat", "Delete"),
-    passBad: L("Nesprávne heslo.", "Nesprávné heslo.", "Wrong password."),
+  const localized = (sk, cs, en) => ({ sk, cs, en });
+  const TEXT = {
+    start: localized("Štart ▶", "Start ▶", "Start ▶"),
+    again: localized("Znova", "Znovu", "Again"),
+    best: localized("Rekord:", "Rekord:", "Best:"),
+    noBest: localized("Zatiaľ bez výsledku", "Zatím bez výsledku", "No results yet"),
+    newBest: localized("🏆 Nový rekord!", "🏆 Nový rekord!", "🏆 New best!"),
+    result: localized("Výsledok", "Výsledek", "Result"),
+    back: localized("← Tréning mysle", "← Trénink mysli", "← Brain training"),
+    backDaily: localized("← Denný tréning", "← Denní trénink", "← Daily workout"),
+    home: localized("← Hry", "← Hry", "← Games"),
+    homeDaily: localized("← Tréning", "← Trénink", "← Workout"),
+    nextDaily: localized("Ďalšia hra ▶", "Další hra ▶", "Next game ▶"),
+    dailyDone: localized("Denný tréning hotový ✅", "Denní trénink hotový ✅", "Daily workout done ✅"),
+    daily: localized("Denný tréning", "Denní trénink", "Daily workout"),
+    next: localized("Ďalej ▶", "Dále ▶", "Next ▶"),
+    board: localized("Najlepšie výkony", "Nejlepší výkony", "Leaderboard"),
+    boardEmpty: localized("Zatiaľ nikto. Buď prvý!", "Zatím nikdo. Buď první!", "No one yet. Be the first!"),
+    who: localized("Kto hrá?", "Kdo hraje?", "Who's playing?"),
+    nameHint: localized("Meno sa ukáže v tabuľke najlepších výkonov. Výsledky sa ukladajú v tomto prehliadači.", "Jméno se ukáže v tabulce nejlepších výkonů. Výsledky se ukládají v tomto prohlížeči.", "Your name appears on the leaderboard. Results are stored in this browser."),
+    nameHintShared: localized("Meno sa ukáže v spoločnej tabuľke najlepších výkonov – vidia ju všetci hráči.", "Jméno se ukáže ve společné tabulce nejlepších výkonů – vidí ji všichni hráči.", "Your name appears on the shared leaderboard that all players see."),
+    statusLocal: localized("📱 Len hráči z tohto zariadenia", "📱 Jen hráči z tohoto zařízení", "📱 Players on this device only"),
+    statusLoading: localized("🌐 Načítavam…", "🌐 Načítám…", "🌐 Loading…"),
+    statusOnline: localized("🌐 Spoločná tabuľka", "🌐 Společná tabulka", "🌐 Shared leaderboard"),
+    statusOffline: localized("⚠️ Bez spojenia – len toto zariadenie", "⚠️ Bez připojení – jen toto zařízení", "⚠️ Offline – this device only"),
+    namePlaceholder: localized("Tvoje meno", "Tvoje jméno", "Your name"),
+    nameRequired: localized("Zadaj meno.", "Zadej jméno.", "Please enter a name."),
+    play: localized("Hrať ▶", "Hrát ▶", "Play ▶"),
+    cancel: localized("Zrušiť", "Zrušit", "Cancel"),
+    deleteResult: localized("Zmazať výsledok", "Smazat výsledek", "Delete result"),
+    deleteQuestion: localized("Zmazať z tabuľky výsledok hráča", "Smazat z tabulky výsledek hráče", "Delete the leaderboard result of"),
+    deleteFailed: localized("⚠️ Mazanie sa nepodarilo", "⚠️ Smazání se nepodařilo", "⚠️ Delete failed"),
+    adminPasswordTitle: localized("🔑 Heslo správcu", "🔑 Heslo správce", "🔑 Admin password"),
+    adminPasswordHint: localized("Mazať výsledky smie len správca. Heslo sa zapamätá v tomto prehliadači.", "Mazat výsledky smí jen správce. Heslo se zapamatuje v tomto prohlížeči.", "Only the admin can delete results. The password is remembered in this browser."),
+    passwordPlaceholder: localized("Heslo", "Heslo", "Password"),
+    deleteButton: localized("Zmazať", "Smazat", "Delete"),
+    wrongPassword: localized("Nesprávne heslo.", "Nesprávné heslo.", "Wrong password."),
   };
-  const $ = id => document.getElementById(id);
-  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const byId = id => document.getElementById(id);
+  const randomInt = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
   const pick = a => a[Math.floor(Math.random() * a.length)];
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -67,27 +67,27 @@ const Brain = (() => {
     return a;
   }
 
-  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
-  // ---- úložisko: gload/gsave = spoločné pre zariadenie, load/save = aktuálneho hráča ----
-  function gload(k, def) {
+  // ---- úložisko: loadShared/saveShared = spoločné pre zariadenie, load/save = aktuálneho hráča ----
+  function loadShared(k, def) {
     try { const v = localStorage.getItem("brain." + k); return v === null ? def : JSON.parse(v); } catch (e) { return def; }
   }
-  function gsave(k, v) {
+  function saveShared(k, v) {
     try { localStorage.setItem("brain." + k, JSON.stringify(v)); } catch (e) { /* bez úložiska sa len nepamätá */ }
   }
-  const load = (k, def) => gload(`u.${user()}.${k}`, def);
-  const save = (k, v) => gsave(`u.${user()}.${k}`, v);
+  const loadPlayer = (k, def) => loadShared(`u.${user()}.${k}`, def);
+  const savePlayer = (k, v) => saveShared(`u.${user()}.${k}`, v);
 
   // ---- hráč ----
   const cleanName = s => String(s ?? "").trim().replace(/\s+/g, " ").slice(0, 20);
-  function user() { return cleanName(gload("user", "")); }
-  function users() { return gload("users", []); }
+  function user() { return cleanName(loadShared("user", "")); }
+  function users() { return loadShared("users", []); }
   function setUser(name) {
     name = cleanName(name);
     if (!name) return false;
-    gsave("user", name);
-    if (!users().includes(name)) gsave("users", [...users(), name]);
+    saveShared("user", name);
+    if (!users().includes(name)) saveShared("users", [...users(), name]);
     return true;
   }
 
@@ -97,57 +97,82 @@ const Brain = (() => {
   }
   const locale = () => ({ sk: "sk-SK", cs: "cs-CZ", en: "en-US" })[I18N.lang] || "sk-SK";
   // Číslo podľa jazyka (medzera/čiarka); fixed = vždy `dec` desatinných miest.
-  function num(x, dec = 0, fixed = false) {
+  function formatNumber(x, dec = 0, fixed = false) {
     return Number(x).toLocaleString(locale(), { maximumFractionDigits: dec, minimumFractionDigits: fixed ? dec : 0 });
   }
-  const secs = ms => num(ms / 1000, 1, true) + " s";
+  const formatSeconds = ms => formatNumber(ms / 1000, 1, true) + " s";
 
-  // Výsledok „správne, pri zhode kratší čas“ ako jedno číslo (väčšie = lepšie), aby fungovalo
-  // bežné triedenie aj pravidlá servera: správne × SCALE + (SCALE − čas v desatinách s).
-  // Čas 0,1 s – 2,75 h; NO_TIME = výsledok spred merania času (čas neznámy, najhorší).
-  // total = počet úloh; staré výsledky (len počet správnych) sú ≤ total.
-  function okTime(total) {
-    const SCALE = 100000, NO_TIME = 99000;
-    const encode = (ok, ms) => ok * SCALE + SCALE - clamp(Math.round(ms / 100), 1, NO_TIME - 1);
-    function decode(s) {
-      if (s <= total) return { ok: s, ms: null };
-      const tenths = SCALE - (s % SCALE);
-      return { ok: Math.floor(s / SCALE), ms: tenths >= NO_TIME ? null : tenths * 100 };
+  // Výsledok „počet správnych, pri zhode kratší čas“ ako jedno číslo (väčšie = lepšie), aby
+  // fungovalo bežné triedenie aj pravidlá servera: správne × SCALE + (SCALE − čas v desatinách s).
+  // Čas 0,1 s – 2,75 h; UNKNOWN_TIME = výsledok spred merania času (čas neznámy, najhorší).
+  // total = počet úloh v kole; staré výsledky (len počet správnych) sú ≤ total.
+  function scoreWithTime(total) {
+    const SCALE = 100000, UNKNOWN_TIME = 99000;
+    const tenthsOf = ms => clamp(Math.round(ms / 100), 1, UNKNOWN_TIME - 1);
+    const encode = (correct, ms) => correct * SCALE + SCALE - tenthsOf(ms);
+    function decode(score) {
+      if (score <= total) return { correct: score, ms: null };
+      const tenths = SCALE - (score % SCALE);
+      return { correct: Math.floor(score / SCALE), ms: tenths >= UNKNOWN_TIME ? null : tenths * 100 };
     }
-    const fmt = s => { const d = decode(s); return `${d.ok}/${total} · ${d.ms === null ? "–" : secs(d.ms)}`; };
-    const upgrade = s => (typeof s === "number" && s <= total ? s * SCALE + SCALE - NO_TIME : s);
-    return { encode, decode, fmt, upgrade };
+    function format(score) {
+      const { correct, ms } = decode(score);
+      return `${correct}/${total} · ${ms === null ? "–" : formatSeconds(ms)}`;
+    }
+    const isOldFormat = score => typeof score === "number" && score <= total;
+    const upgradeOldFormat = score => (isOldFormat(score) ? score * SCALE + SCALE - UNKNOWN_TIME : score);
+    return { encode, decode, format, upgradeOldFormat };
   }
 
   // ---- výsledky ----
-  function history(key) { return load("h." + key, []); }
-  function best(key) { return load("best." + key, null); }
+  function history(key) { return loadPlayer("h." + key, []); }
+  function best(key) { return loadPlayer("best." + key, null); }
   function markDay() {
-    const days = load("days", {});
+    const days = loadPlayer("days", {});
     days[today()] = (days[today()] || 0) + 1;
-    save("days", days);
+    savePlayer("days", days);
   }
-  // Uloží výsledok: história (posledných 60), rekord, aktívny deň.
+  const HISTORY_LENGTH = 60;
+  // Uloží výsledok: história, osobný rekord, tabuľka zariadenia (a fronta na server), aktívny deň.
   function record(key, score, lower = false) {
-    const hist = history(key);
-    hist.push({ d: today(), s: score });
-    save("h." + key, hist.slice(-60));
+    const hist = [...history(key), { d: today(), s: score }].slice(-HISTORY_LENGTH);
+    savePlayer("h." + key, hist);
     const prev = best(key);
-    const isBest = prev === null || (lower ? score < prev : score > prev);
-    if (isBest) save("best." + key, score);
+    const isBest = prev === null || isBetter(score, prev, lower);
+    if (isBest) savePlayer("best." + key, score);
     // tabuľka: pre každého hráča len jeho najlepší výsledok
-    const lb = gload("lb." + key, {}), me = user() || "?";
-    if (!(me in lb) || (lower ? score < lb[me] : score > lb[me])) {
-      lb[me] = score; gsave("lb." + key, lb);
-      if (cloudOn()) enqueue(key, me, score);
+    const local = loadLocalBoard(key), player = user() || "?";
+    if (!(player in local) || isBetter(score, local[player], lower)) {
+      local[player] = score;
+      saveLocalBoard(key, local);
+      if (cloudOn()) queueUpload(key, player, score);
     }
     markDay();
-    return { isBest, prev, best: isBest ? score : prev, hist: hist.slice(-60) };
+    return { isBest, prev, best: isBest ? score : prev, hist };
+  }
+
+  // Prevedie uložené výsledky hry (rekord, história, tabuľka zariadenia, fronta) funkciou
+  // convert, ktorá pre už prevedený výsledok vráti to isté číslo. Prevedené rekordy
+  // zariadenia sa zaradia na odoslanie, aby na serveri prepísali starý formát.
+  function convertScores(key, convert) {
+    const oldBest = best(key);
+    if (oldBest !== null && convert(oldBest) !== oldBest) savePlayer("best." + key, convert(oldBest));
+    const hist = history(key);
+    if (hist.some(entry => convert(entry.s) !== entry.s)) savePlayer("h." + key, hist.map(entry => ({ ...entry, s: convert(entry.s) })));
+    const local = loadLocalBoard(key), queue = loadUploadQueue();
+    const changed = Object.keys(local).filter(name => convert(local[name]) !== local[name]);
+    for (const name of changed) {
+      local[name] = convert(local[name]);
+      (queue[key] = queue[key] || {})[name] = local[name];
+    }
+    if (changed.length) saveLocalBoard(key, local);
+    if (queue[key]) for (const name in queue[key]) queue[key][name] = convert(queue[key][name]);
+    saveUploadQueue(queue);
   }
 
   // ---- denný tréning (plán uložený z dospeli/trening/) ----
   let gameKey = "";
-  function dailyPlan() { const d = load("daily", null); return d && d.date === today() ? d : null; }
+  function dailyPlan() { const d = loadPlayer("daily", null); return d && d.date === today() ? d : null; }
   function inDaily() {
     const d = dailyPlan();
     return /[?&]daily\b/.test(location.search || "") && !!d && d.games.includes(gameKey);
@@ -157,9 +182,9 @@ const Brain = (() => {
     const d = dailyPlan();
     if (!d) return null;
     if (!d.done.includes(gameKey)) d.done.push(gameKey);
-    save("daily", d);
+    savePlayer("daily", d);
     const next = d.games.find(g => !d.done.includes(g)) || null;
-    if (!next) { const all = load("dailyDone", {}); all[d.date] = true; save("dailyDone", all); }
+    if (!next) { const all = loadPlayer("dailyDone", {}); all[d.date] = true; savePlayer("dailyDone", all); }
     return next;
   }
 
@@ -183,27 +208,27 @@ const Brain = (() => {
     const known = users();
     ov.innerHTML = `
       <div class="card gate">
-        <h2>👤 ${t(S.who)}</h2>
-        ${known.length ? `<div class="known">${known.map(n => `<button type="button" data-n="${esc(n)}">${esc(n)}</button>`).join("")}</div>` : ""}
-        <input id="userName" type="text" maxlength="20" placeholder="${t(S.namePh)}" autocomplete="nickname">
+        <h2>👤 ${translate(TEXT.who)}</h2>
+        ${known.length ? `<div class="known">${known.map(n => `<button type="button" data-n="${escapeHtml(n)}">${escapeHtml(n)}</button>`).join("")}</div>` : ""}
+        <input id="userName" type="text" maxlength="20" placeholder="${translate(TEXT.namePlaceholder)}" autocomplete="nickname">
         <p class="err" id="userErr"></p>
-        <p class="muted">${t(cloudOn() ? S.whyNameCloud : S.whyName)}</p>
+        <p class="muted">${translate(cloudOn() ? TEXT.nameHintShared : TEXT.nameHint)}</p>
         <div class="btnrow">
-          ${canCancel ? `<button type="button" id="userCancel">${t(S.cancel)}</button>` : ""}
-          <button type="button" class="primary" id="userOk">${t(S.play)}</button>
+          ${canCancel ? `<button type="button" id="userCancel">${translate(TEXT.cancel)}</button>` : ""}
+          <button type="button" class="primary" id="userOk">${translate(TEXT.play)}</button>
         </div>
       </div>`;
     document.body.appendChild(ov);
     const choose = name => {
-      if (!setUser(name)) { $("userErr").textContent = t(S.nameReq); return; }
+      if (!setUser(name)) { byId("userErr").textContent = translate(TEXT.nameRequired); return; }
       gateOpen = false;
       location.reload();
     };
     ov.querySelectorAll(".known button").forEach(b => b.addEventListener("click", () => choose(b.dataset.n)));
-    $("userOk").addEventListener("click", () => choose($("userName").value));
-    $("userName").addEventListener("keydown", e => { if (e.key === "Enter") choose($("userName").value); });
-    if (canCancel) $("userCancel").addEventListener("click", () => { ov.remove(); gateOpen = false; });
-    $("userName").focus();
+    byId("userOk").addEventListener("click", () => choose(byId("userName").value));
+    byId("userName").addEventListener("keydown", e => { if (e.key === "Enter") choose(byId("userName").value); });
+    if (canCancel) byId("userCancel").addEventListener("click", () => { ov.remove(); gateOpen = false; });
+    byId("userName").focus();
   }
   // Tlačidlo s menom do hlavičky; bez mena hneď otvorí výber (meno je povinné).
   function ensureUser(header) {
@@ -219,218 +244,279 @@ const Brain = (() => {
   }
 
   // ---- spoločná tabuľka online (Firestore REST, bez knižnice) ----
+  // Kľúče v localStorage (s predponou „brain.“). Reťazce sa nemenia – sú v nich už uložené výsledky.
+  const STORAGE = {
+    localBoard: game => "lb." + game,  // najlepšie výsledky hráčov z tohto zariadenia { meno: výsledok }
+    uploadQueue: "lbq",                // výsledky čakajúce na odoslanie { hra: { meno: výsledok } }
+    syncedGames: "lbsynced",           // hry, ktorých staré lokálne rekordy sa už raz nahrali
+    adminPassword: "adminPass",
+  };
+  const loadLocalBoard = game => loadShared(STORAGE.localBoard(game), {});
+  const saveLocalBoard = (game, scores) => saveShared(STORAGE.localBoard(game), scores);
+  const loadUploadQueue = () => loadShared(STORAGE.uploadQueue, {});
+  const saveUploadQueue = queue => saveShared(STORAGE.uploadQueue, queue);
+  const loadSyncedGames = () => loadShared(STORAGE.syncedGames, []);
+
+  // lower = pri tejto hre je menej lepšie (čas)
+  const isBetter = (score, than, lower) => (lower ? score < than : score > than);
+  // Zapíše výsledok do tabuľky { meno: výsledok }, ak je to najlepší výsledok toho hráča.
+  function keepBest(scores, name, score, lower) {
+    if (!(name in scores) || isBetter(score, scores[name], lower)) scores[name] = score;
+  }
+
   const cloudOn = () => !!(CLOUD.projectId && CLOUD.apiKey) && typeof fetch === "function";
-  const DOCS = () => `projects/${encodeURIComponent(CLOUD.projectId)}/databases/(default)/documents`;
-  const withKey = url => `${url}${url.includes("?") ? "&" : "?"}key=${encodeURIComponent(CLOUD.apiKey)}`;
-  // JSON požiadavka s časovým limitom; chyba nesie hlášku servera (napr. INVALID_LOGIN_CREDENTIALS)
-  async function req(url, { method = "POST", body, form, token } = {}) {
-    const ctl = typeof AbortController === "function" ? new AbortController() : null;
-    const timer = ctl && setTimeout(() => ctl.abort(), 8000);
+  const FIRESTORE_URL = "https://firestore.googleapis.com/v1/";
+  const REQUEST_TIMEOUT_MS = 8000;
+  const SCORES_QUERY_LIMIT = 5000;
+  const documentsPath = () => `projects/${CLOUD.projectId}/databases/(default)/documents`;
+
+  // Požiadavka na Firestore; chyba nesie hlášku a stav zo servera (napr. PERMISSION_DENIED).
+  async function firestore(path, { method = "POST", body } = {}) {
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), REQUEST_TIMEOUT_MS);
     try {
-      const headers = { "Content-Type": form ? "application/x-www-form-urlencoded" : "application/json" };
-      if (token) headers.Authorization = "Bearer " + token;
-      const r = await fetch(withKey(url), {
-        method, headers,
-        body: form ? new URLSearchParams(form).toString() : body === undefined ? undefined : JSON.stringify(body),
-        signal: ctl ? ctl.signal : undefined,
+      const url = `${FIRESTORE_URL}${documentsPath()}${path}?key=${encodeURIComponent(CLOUD.apiKey)}`;
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: body === undefined ? undefined : JSON.stringify(body),
+        signal: abort.signal,
       });
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        const err = new Error((data.error && (data.error.message || data.error.status)) || "HTTP " + r.status);
-        err.status = data.error && data.error.status;
-        throw err;
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const error = new Error(data.error?.message || `HTTP ${response.status}`);
+        error.status = data.error?.status;
+        throw error;
       }
       return data;
-    } finally { if (timer) clearTimeout(timer); }
+    } finally { clearTimeout(timer); }
   }
-  const fs = (path, opts) => req(`https://firestore.googleapis.com/v1/${DOCS()}${path}`, opts);
-  // { lb: { meno: výsledok }, docs: { meno: [id dokumentov] } } zo servera;
-  // pri viacerých dokumentoch s rovnakým menom platí najlepší
-  async function cloudLoad(key, lower) {
-    const rows = await fs(":runQuery", { body: { structuredQuery: {
-      from: [{ collectionId: "scores" }],
-      where: { fieldFilter: { field: { fieldPath: "g" }, op: "EQUAL", value: { stringValue: key } } },
-      limit: 1000,
-    } } });
-    const lb = {}, docs = {};
-    for (const { document: d } of rows) {
-      const r = fsRow(d);
-      if (!r) continue;
-      (docs[r.n] = docs[r.n] || []).push(d.name.slice(d.name.lastIndexOf("/") + 1));
-      if (!(r.n in lb) || better(r.s, lb[r.n], lower)) lb[r.n] = r.s;
-    }
-    return { lb, docs };
-  }
-  // dokument zo servera → { g, n, s } alebo null, keď je neúplný
-  function fsRow(d) {
-    if (!d || !d.fields || !d.fields.g || !d.fields.n || !d.fields.s) return null;
-    const n = cleanName(d.fields.n.stringValue), v = d.fields.s;
-    const s = Number(v.integerValue ?? v.doubleValue);
-    return n && Number.isFinite(s) ? { g: d.fields.g.stringValue, n, s } : null;
-  }
-  // Tabuľky viacerých hier naraz (úvodná stránka): spec = { kľúč: lower } → { kľúč: { meno: výsledok } }.
-  // online = zo servera (jedna požiadavka) + výsledky čakajúce na odoslanie; staré lokálne
-  // rekordy len pri hrách, ktoré sa ešte nesynchronizovali – inak by sa ukázali riadky,
-  // ktoré správca zmazal. Bez online len údaje z tohto zariadenia.
-  async function allBoards(spec, { online = cloudOn() } = {}) {
-    const synced = online ? gload("lbsynced", []) : [], q = gload("lbq", {}), out = {};
-    const put = (k, n, s) => { if (!(n in out[k]) || better(s, out[k][n], spec[k])) out[k][n] = s; };
-    for (const k in spec) out[k] = synced.includes(k) ? {} : { ...gload("lb." + k, {}) };
-    if (online) {
-      const rows = await fs(":runQuery", { body: { structuredQuery: { from: [{ collectionId: "scores" }], limit: 5000 } } });
-      for (const { document: d } of rows) { const r = fsRow(d); if (r && r.g in out) put(r.g, r.n, r.s); }
-    }
-    for (const k in spec) for (const [n, s] of Object.entries(q[k] || {})) put(k, n, s);
-    return out;
-  }
-  // id dokumentu hráča v danej hre (bez „/“, aby nerozbilo cestu)
-  const docId = (key, name) => encodeURIComponent(key + "|" + name);
-  function cloudPut(key, name, score, lower) {
-    return fs("/scores/" + encodeURIComponent(docId(key, name)), { method: "PATCH", body: { fields: {
-      g: { stringValue: key },
+
+  // Dokument v kolekcii scores. Krátke názvy polí používajú pravidlá Firestore, preto sa nemenia:
+  //   g = kľúč hry, n = meno, s = výsledok, lower = menej je lepšie, t = čas zápisu
+  function toScoreFields(game, name, score, lower) {
+    return {
+      g: { stringValue: game },
       n: { stringValue: name },
       s: Number.isInteger(score) ? { integerValue: String(score) } : { doubleValue: score },
       lower: { booleanValue: !!lower },
       t: { timestampValue: new Date().toISOString() },
-    } } });
+    };
   }
-  function enqueue(key, name, score) {
-    const q = gload("lbq", {});
-    (q[key] = q[key] || {})[name] = score;
-    gsave("lbq", q);
+  // Dokument zo servera → { id, game, name, score }, neúplný → null.
+  function fromScoreDocument(doc) {
+    const fields = doc && doc.fields;
+    if (!fields || !fields.g || !fields.n || !fields.s) return null;
+    const name = cleanName(fields.n.stringValue);
+    const score = Number(fields.s.integerValue ?? fields.s.doubleValue);
+    if (!name || !Number.isFinite(score)) return null;
+    return { id: doc.name.slice(doc.name.lastIndexOf("/") + 1), game: fields.g.stringValue, name, score };
   }
-  // Stiahne tabuľku a odošle čakajúce výsledky. Staré lokálne rekordy (spred spoločnej
-  // tabuľky) sa pri prvej synchronizácii hry nahrajú len raz – inak by sa zmazané
-  // riadky z tohto zariadenia vracali.
-  async function cloudSync(key, lower) {
-    const { lb, docs } = await cloudLoad(key, lower);
-    const synced = gload("lbsynced", []);
-    const pending = { ...(synced.includes(key) ? {} : gload("lb." + key, {})), ...(gload("lbq", {})[key] || {}) };
-    const sent = await Promise.all(Object.entries(pending).map(async ([n, s]) => {
-      if (n in lb && !better(s, lb[n], lower)) return true;
-      lb[n] = s; // aj keď sa nepodarí odoslať, vlastný výsledok sa ukáže
-      try { await cloudPut(key, n, s, lower); return true; } catch (e) { return false; }
-    }));
-    const ok = Object.keys(pending).filter((n, i) => sent[i]);
-    // fronta sa číta znova – počas odosielania mohol pribudnúť nový výsledok
-    const q = gload("lbq", {});
-    for (const n of ok) if (q[key] && q[key][n] === pending[n]) delete q[key][n];
-    if (q[key] && !Object.keys(q[key]).length) delete q[key];
-    gsave("lbq", q);
-    if (!synced.includes(key) && ok.length === Object.keys(pending).length) gsave("lbsynced", [...synced, key]);
-    // riadok, ktorý na serveri chýba (zmazal ho správca), zmizne aj z lokálnej tabuľky –
-    // inak by sa ďalší, horší výsledok toho hráča už nikdy neodoslal
-    if (synced.includes(key)) {
-      const local = gload("lb." + key, {});
-      const gone = Object.keys(local).filter(n => !(n in lb));
-      if (gone.length) { gone.forEach(n => delete local[n]); gsave("lb." + key, local); }
+  // Výsledky jednej hry, alebo bez game všetkých hier naraz.
+  async function queryScores(game = null) {
+    const query = { from: [{ collectionId: "scores" }], limit: SCORES_QUERY_LIMIT };
+    if (game) query.where = { fieldFilter: { field: { fieldPath: "g" }, op: "EQUAL", value: { stringValue: game } } };
+    const rows = await firestore(":runQuery", { body: { structuredQuery: query } });
+    return rows.map(row => fromScoreDocument(row.document)).filter(Boolean);
+  }
+  // { scores: { meno: najlepší výsledok }, documentIds: { meno: [id dokumentov] } }
+  async function loadCloudBoard(game, lower) {
+    const scores = {}, documentIds = {};
+    for (const row of await queryScores(game)) {
+      (documentIds[row.name] = documentIds[row.name] || []).push(row.id);
+      keepBest(scores, row.name, row.score, lower);
     }
-    return { lb, docs };
+    return { scores, documentIds };
+  }
+
+  // Tabuľky viacerých hier naraz (úvodná stránka): lowerByGame = { hra: lower } → { hra: { meno: výsledok } }.
+  // online = jedna požiadavka na server + výsledky čakajúce na odoslanie. Staré lokálne rekordy
+  // len pri hrách, ktoré sa ešte nesynchronizovali – inak by sa ukázali riadky zmazané správcom.
+  // Bez online len údaje z tohto zariadenia.
+  async function loadBoards(lowerByGame, { online = cloudOn() } = {}) {
+    const synced = online ? loadSyncedGames() : [];
+    const boards = {};
+    for (const game in lowerByGame) boards[game] = synced.includes(game) ? {} : { ...loadLocalBoard(game) };
+    if (online) {
+      for (const row of await queryScores()) {
+        if (row.game in boards) keepBest(boards[row.game], row.name, row.score, lowerByGame[row.game]);
+      }
+    }
+    const queue = loadUploadQueue();
+    for (const game in lowerByGame) {
+      for (const [name, score] of Object.entries(queue[game] || {})) keepBest(boards[game], name, score, lowerByGame[game]);
+    }
+    return boards;
+  }
+
+  // id dokumentu hráča v danej hre (bez „/“, aby nerozbilo cestu)
+  const documentId = (game, name) => encodeURIComponent(game + "|" + name);
+  function uploadScore(game, name, score, lower) {
+    return firestore("/scores/" + encodeURIComponent(documentId(game, name)),
+      { method: "PATCH", body: { fields: toScoreFields(game, name, score, lower) } });
+  }
+  function queueUpload(game, name, score) {
+    const queue = loadUploadQueue();
+    (queue[game] = queue[game] || {})[name] = score;
+    saveUploadQueue(queue);
+  }
+  // Odošle čakajúce výsledky a vráti tabuľku zo servera. Staré lokálne rekordy (spred spoločnej
+  // tabuľky) sa nahrajú len pri prvej synchronizácii hry – inak by sa zmazané riadky vracali.
+  async function syncBoard(game, lower) {
+    const { scores, documentIds } = await loadCloudBoard(game, lower);
+    const synced = loadSyncedGames();
+    const firstSync = !synced.includes(game);
+    const pending = { ...(firstSync ? loadLocalBoard(game) : {}), ...(loadUploadQueue()[game] || {}) };
+    const done = [];
+    await Promise.all(Object.entries(pending).map(async ([name, score]) => {
+      if (name in scores && !isBetter(score, scores[name], lower)) { done.push(name); return; }
+      scores[name] = score;  // vlastný výsledok sa ukáže, aj keď sa ho nepodarí odoslať
+      try { await uploadScore(game, name, score, lower); done.push(name); } catch (error) { /* skúsi sa znova nabudúce */ }
+    }));
+    removeFromQueue(game, done, pending);
+    if (firstSync && done.length === Object.keys(pending).length) saveShared(STORAGE.syncedGames, [...synced, game]);
+    if (!firstSync) forgetDeletedRows(game, scores);
+    return { scores, documentIds };
+  }
+  // Fronta sa číta znova – počas odosielania mohol pribudnúť novší výsledok, ten v nej ostane.
+  function removeFromQueue(game, names, sentScores) {
+    const queue = loadUploadQueue();
+    if (!queue[game]) return;
+    for (const name of names) if (queue[game][name] === sentScores[name]) delete queue[game][name];
+    if (!Object.keys(queue[game]).length) delete queue[game];
+    saveUploadQueue(queue);
+  }
+  // Riadok, ktorý na serveri chýba (zmazal ho správca), zmizne aj z lokálnej tabuľky –
+  // inak by sa ďalší, horší výsledok toho hráča už nikdy neodoslal.
+  function forgetDeletedRows(game, cloudScores) {
+    const local = loadLocalBoard(game);
+    const deleted = Object.keys(local).filter(name => !(name in cloudScores));
+    if (!deleted.length) return;
+    deleted.forEach(name => delete local[name]);
+    saveLocalBoard(game, local);
   }
 
   // ---- správca: mazanie riadkov heslom ----
   // Jeden atomický zápis (commit): heslo do skrytého dokumentu admin/del s časom servera
   // + zmazanie riadkov. Pravidlá povolia zmazanie, len keď sa v tej istej požiadavke
   // zapísalo správne heslo (admin/del sa nedá čítať). Pravidlá: README → Mazanie riadkov.
+  const ADMIN_DOCUMENT = "admin/del";
   const isAdmin = () => cloudOn() && !!CLOUD.admin && user() === CLOUD.admin;
+  const isPermissionDenied = error => error.status === "PERMISSION_DENIED";
   // meno dokumentu v tele požiadavky (nie v URL, preto bez kódovania)
-  const docPath = path => `projects/${CLOUD.projectId}/databases/(default)/documents/${path}`;
-  function cloudDelete(ids, pass) {
-    return fs(":commit", { body: { writes: [
-      { update: { name: docPath("admin/del"), fields: { p: { stringValue: pass } } },
+  const documentName = path => `${documentsPath()}/${path}`;
+  function deleteDocuments(ids, password) {
+    return firestore(":commit", { body: { writes: [
+      { update: { name: documentName(ADMIN_DOCUMENT), fields: { p: { stringValue: password } } },
         updateTransforms: [{ fieldPath: "t", setToServerValue: "REQUEST_TIME" }] },
-      ...ids.map(id => ({ delete: docPath("scores/" + id) })),
+      ...ids.map(id => ({ delete: documentName("scores/" + id) })),
     ] } });
   }
-  const denied = e => e.status === "PERMISSION_DENIED";
   // Zmaže dokumenty s uloženým heslom; bez neho (alebo so zlým) sa naň spýta. false = zrušené.
-  async function deleteWithPass(ids) {
-    const saved = gload("adminPass", "");
+  async function deleteWithPassword(ids) {
+    const saved = loadShared(STORAGE.adminPassword, "");
     if (saved) {
-      try { await cloudDelete(ids, saved); return true; } catch (e) { if (!denied(e)) throw e; gsave("adminPass", ""); }
+      try { await deleteDocuments(ids, saved); return true; } catch (error) {
+        if (!isPermissionDenied(error)) throw error;
+        saveShared(STORAGE.adminPassword, "");
+      }
     }
-    return new Promise(done => {
+    return askPasswordAndDelete(ids);
+  }
+  function askPasswordAndDelete(ids) {
+    return new Promise(resolve => {
       gateOpen = true;
-      const ov = document.createElement("div");
-      ov.className = "usergate";
-      ov.innerHTML = `
+      const dialog = document.createElement("div");
+      dialog.className = "usergate";
+      dialog.innerHTML = `
         <div class="card gate">
-          <h2>${t(S.adminTitle)}</h2>
-          <input id="adminPass" type="password" placeholder="${t(S.passPh)}" autocomplete="current-password">
+          <h2>${translate(TEXT.adminPasswordTitle)}</h2>
+          <input id="adminPass" type="password" placeholder="${translate(TEXT.passwordPlaceholder)}" autocomplete="current-password">
           <p class="err" id="adminErr"></p>
-          <p class="muted">${t(S.adminWhy)}</p>
+          <p class="muted">${translate(TEXT.adminPasswordHint)}</p>
           <div class="btnrow">
-            <button type="button" id="adminCancel">${t(S.cancel)}</button>
-            <button type="button" class="primary" id="adminOk">${t(S.passOk)}</button>
+            <button type="button" id="adminCancel">${translate(TEXT.cancel)}</button>
+            <button type="button" class="primary" id="adminOk">${translate(TEXT.deleteButton)}</button>
           </div>
         </div>`;
-      document.body.appendChild(ov);
-      const close = v => { ov.remove(); gateOpen = false; done(v); };
-      const go = async () => {
-        const pass = $("adminPass").value;
-        if (!pass) return;
-        $("adminErr").textContent = "";
-        try { await cloudDelete(ids, pass); gsave("adminPass", pass); close(true); }
-        catch (e) { $("adminErr").textContent = denied(e) ? t(S.passBad) : `${t(S.delFail)} (${e.message})`; }
+      document.body.appendChild(dialog);
+      const close = deleted => { dialog.remove(); gateOpen = false; resolve(deleted); };
+      const submit = async () => {
+        const password = byId("adminPass").value;
+        if (!password) return;
+        byId("adminErr").textContent = "";
+        try {
+          await deleteDocuments(ids, password);
+          saveShared(STORAGE.adminPassword, password);
+          close(true);
+        } catch (error) {
+          byId("adminErr").textContent = isPermissionDenied(error)
+            ? translate(TEXT.wrongPassword) : `${translate(TEXT.deleteFailed)} (${error.message})`;
+        }
       };
-      $("adminOk").addEventListener("click", go);
-      $("adminPass").addEventListener("keydown", e => { if (e.key === "Enter") go(); });
-      $("adminCancel").addEventListener("click", () => close(false));
-      $("adminPass").focus();
+      byId("adminOk").addEventListener("click", submit);
+      byId("adminPass").addEventListener("keydown", e => { if (e.key === "Enter") submit(); });
+      byId("adminCancel").addEventListener("click", () => close(false));
+      byId("adminPass").focus();
     });
   }
-  // Zmaže riadok hráča zo servera aj z tohto zariadenia (tabuľka, rekord, história, fronta).
-  async function deleteRow(key, name, ids) {
-    if (!confirm(`${t(S.delAsk)} „${name}“?`)) return false;
+  // Zmaže riadok hráča zo servera aj z tohto zariadenia (tabuľka, fronta, rekord, história).
+  async function deleteRow(game, name, ids) {
+    if (!confirm(`${translate(TEXT.deleteQuestion)} „${name}“?`)) return false;
     // aj vlastné id – riadok mohol práve pribudnúť pri tejto synchronizácii
-    if (!(await deleteWithPass([...new Set([...ids, docId(key, name)])]))) return false;
-    const lb = gload("lb." + key, {});
-    if (name in lb) { delete lb[name]; gsave("lb." + key, lb); }
-    const q = gload("lbq", {});
-    if (q[key] && name in q[key]) { delete q[key][name]; gsave("lbq", q); }
-    if (users().includes(name)) { gsave(`u.${name}.best.${key}`, null); gsave(`u.${name}.h.${key}`, []); }
+    if (!(await deleteWithPassword([...new Set([...ids, documentId(game, name)])]))) return false;
+    const local = loadLocalBoard(game);
+    if (name in local) { delete local[name]; saveLocalBoard(game, local); }
+    const queue = loadUploadQueue();
+    if (queue[game] && name in queue[game]) { delete queue[game][name]; saveUploadQueue(queue); }
+    if (users().includes(name)) { saveShared(`u.${name}.best.${game}`, null); saveShared(`u.${name}.h.${game}`, []); }
     return true;
   }
 
   // ---- tabuľka najlepších (vpravo vedľa hry) ----
-  const better = (a, b, lower) => (lower ? a < b : a > b);
-  let boardSeq = 0;
+  let latestBoardRequest = 0;
   function board(key, { lower = false, fmt = String } = {}) {
-    if (!$("board")) return;
-    const seq = ++boardSeq;
-    const opts = { key, lower, fmt };
-    if (!cloudOn()) { drawBoard(gload("lb." + key, {}), opts, S.netLocal); return; }
-    drawBoard(gload("lb." + key, {}), opts, S.netSync);
-    // kým príde odpoveď, mohla sa zobraziť iná tabuľka (zmena režimu) – tá staršia sa zahodí
-    cloudSync(key, lower).then(
-      ({ lb, docs }) => { if (seq === boardSeq) drawBoard(lb, opts, S.netOn, docs); },
-      () => { if (seq === boardSeq) drawBoard(gload("lb." + key, {}), opts, S.netOff); });
+    if (!byId("board")) return;
+    const request = ++latestBoardRequest;
+    const options = { key, lower, fmt };
+    if (!cloudOn()) { drawBoard(loadLocalBoard(key), options, TEXT.statusLocal); return; }
+    drawBoard(loadLocalBoard(key), options, TEXT.statusLoading);
+    // kým príde odpoveď, mohla sa zobraziť iná tabuľka (zmena režimu) – staršia odpoveď sa zahodí
+    const isLatest = () => request === latestBoardRequest;
+    syncBoard(key, lower).then(
+      ({ scores, documentIds }) => { if (isLatest()) drawBoard(scores, options, TEXT.statusOnline, documentIds); },
+      () => { if (isLatest()) drawBoard(loadLocalBoard(key), options, TEXT.statusOffline); });
   }
-  // docs = id dokumentov zo servera; keď sú a hrá správca, riadky majú 🗑
-  function drawBoard(lb, { key, lower, fmt }, net, docs = null) {
-    const el = $("board");
-    if (!el) return;
-    const me = user(), admin = !!docs && isAdmin();
-    const all = Object.entries(lb).sort((a, b) => (lower ? a[1] - b[1] : b[1] - a[1]));
-    const mine = all.findIndex(([n]) => n === me);
-    const del = n => (admin ? `<button type="button" class="del" data-n="${esc(n)}" title="${t(S.del)}">🗑</button>` : "");
-    const row = ([n, s], i) => `<li class="${n === me ? "me" : ""}"><span class="r">${i + 1}.</span><span class="n" title="${esc(n)}">${esc(n)}</span><b>${fmt(s)}</b>${del(n)}</li>`;
+  // documentIds = id dokumentov zo servera; keď sú a hrá správca, riadky majú 🗑
+  function drawBoard(scores, { key, lower, fmt }, status, documentIds = null) {
+    const container = byId("board");
+    if (!container) return;
+    const player = user(), canDelete = !!documentIds && isAdmin();
+    const ranking = Object.entries(scores).sort((a, b) => (lower ? a[1] - b[1] : b[1] - a[1]));
+    const myIndex = ranking.findIndex(([name]) => name === player);
+    const deleteButton = name => (canDelete
+      ? `<button type="button" class="del" data-n="${escapeHtml(name)}" title="${translate(TEXT.deleteResult)}">🗑</button>` : "");
+    const rowHtml = ([name, score], index) => `<li class="${name === player ? "me" : ""}"><span class="r">${index + 1}.</span>` +
+      `<span class="n" title="${escapeHtml(name)}">${escapeHtml(name)}</span><b>${fmt(score)}</b>${deleteButton(name)}</li>`;
+    const top = ranking.slice(0, 10).map(rowHtml).join("");
+    const myRowBelowTop = myIndex >= 10 ? `<li class="gap">…</li>${rowHtml(ranking[myIndex], myIndex)}` : "";
     // aktuálne nastavenia hry (režim, obtiažnosť…) – aby bolo jasné, čoho sa tabuľka týka
-    const mode = [...document.querySelectorAll("#controls .seg button.active")].map(b => b.textContent).join(" · ");
-    el.innerHTML = `
-      <h3>🏆 ${t(S.board)}</h3>
-      ${mode ? `<p class="muted">${esc(mode)}</p>` : ""}
-      ${all.length ? `<ol class="lb">${all.slice(0, 10).map(row).join("")}${mine >= 10 ? `<li class="gap">…</li>${row(all[mine], mine)}` : ""}</ol>` : `<p class="muted">${t(S.boardEmpty)}</p>`}
-      <p class="muted net">${t(net)}</p>`;
-    if (!admin) return;
-    el.querySelectorAll(".lb .del").forEach(b => b.addEventListener("click", async () => {
-      b.disabled = true;
+    const settings = [...document.querySelectorAll("#controls .seg button.active")].map(b => b.textContent).join(" · ");
+    container.innerHTML = `
+      <h3>🏆 ${translate(TEXT.board)}</h3>
+      ${settings ? `<p class="muted">${escapeHtml(settings)}</p>` : ""}
+      ${ranking.length ? `<ol class="lb">${top}${myRowBelowTop}</ol>` : `<p class="muted">${translate(TEXT.boardEmpty)}</p>`}
+      <p class="muted net">${translate(status)}</p>`;
+    if (!canDelete) return;
+    container.querySelectorAll(".lb .del").forEach(button => button.addEventListener("click", async () => {
+      button.disabled = true;
       try {
-        if (await deleteRow(key, b.dataset.n, docs[b.dataset.n] || [])) board(key, { lower, fmt });
-        else b.disabled = false;
-      } catch (e) {
-        b.disabled = false;
-        el.querySelector(".net").textContent = `${t(S.delFail)} (${e.message})`;
+        const name = button.dataset.n;
+        if (await deleteRow(key, name, documentIds[name] || [])) board(key, { lower, fmt });
+        else button.disabled = false;
+      } catch (error) {
+        button.disabled = false;
+        container.querySelector(".net").textContent = `${translate(TEXT.deleteFailed)} (${error.message})`;
       }
     }));
   }
@@ -441,40 +527,40 @@ const Brain = (() => {
     const daily = inDaily();
     document.body.classList.add("brain");
     document.body.innerHTML = `
-      <header><div class="titlebar"><a class="btn backbtn" id="backBtn" href="${daily ? "../trening/" : "../"}">${t(daily ? S.homeDaily : S.home)}</a><h1>${t(title)}</h1></div><div class="controls" id="controls"></div></header>
+      <header><div class="titlebar"><a class="btn backbtn" id="backBtn" href="${daily ? "../trening/" : "../"}">${translate(daily ? TEXT.homeDaily : TEXT.home)}</a><h1>${translate(title)}</h1></div><div class="controls" id="controls"></div></header>
       <div class="layout"><main id="main"></main><aside class="board" id="board"></aside></div>
-      <footer>${t(footer) || ""} <a href="${daily ? "../trening/" : "../"}">${t(daily ? S.backDaily : S.back)}</a></footer>`;
+      <footer>${translate(footer) || ""} <a href="${daily ? "../trening/" : "../"}">${translate(daily ? TEXT.backDaily : TEXT.back)}</a></footer>`;
     ensureUser(document.querySelector("header"));
     if (daily) {
       const d = dailyPlan();
       const b = document.createElement("span");
       b.className = "daily-badge";
-      b.textContent = `${t(S.daily)} ${d.games.indexOf(key) + 1}/${d.games.length}`;
-      $("controls").appendChild(b);
+      b.textContent = `${translate(TEXT.daily)} ${d.games.indexOf(key) + 1}/${d.games.length}`;
+      byId("controls").appendChild(b);
     }
     I18N.attach();
-    return { controls: $("controls"), main: $("main") };
+    return { controls: byId("controls"), main: byId("main") };
   }
   // Počas hry sa nastavenia nedajú meniť.
   function playing(on) { document.body.classList.toggle("playing", !!on); }
 
   // Prepínač nastavenia (segmentované tlačidlá), voľba sa pamätá.
   function choice(parent, { key, label, options, onChange }) {
-    let value = load("opt." + key, null);
+    let value = loadPlayer("opt." + key, null);
     if (!options.some(o => o.v === value)) value = options[0].v;
     const box = document.createElement("div");
     box.className = "choice";
-    if (label) { const s = document.createElement("span"); s.textContent = t(label); box.appendChild(s); }
+    if (label) { const s = document.createElement("span"); s.textContent = translate(label); box.appendChild(s); }
     const seg = document.createElement("div");
     seg.className = "seg";
     const btns = options.map(o => {
       const b = document.createElement("button");
       b.type = "button";
       b.dataset.v = String(o.v);
-      b.textContent = t(o.label);
+      b.textContent = translate(o.label);
       b.addEventListener("click", () => {
         if (document.body.classList.contains("playing")) return;
-        value = o.v; save("opt." + key, value); sync(); b.blur();
+        value = o.v; savePlayer("opt." + key, value); sync(); b.blur();
         if (onChange) onChange(value);
       });
       seg.appendChild(b);
@@ -508,13 +594,13 @@ const Brain = (() => {
     const b = best(key);
     main.innerHTML = `
       <div class="card intro">
-        <p class="desc">${t(desc)}</p>
+        <p class="desc">${translate(desc)}</p>
         ${extra}
-        <p class="statline">${b === null ? t(S.noBest) : t(S.best) + " <b>" + fmt(b) + "</b>"}</p>
+        <p class="statline">${b === null ? translate(TEXT.noBest) : translate(TEXT.best) + " <b>" + fmt(b) + "</b>"}</p>
         ${spark(history(key), lower)}
-        <div class="btnrow"><button type="button" class="primary" id="startBtn">${t(S.start)}</button></div>
+        <div class="btnrow"><button type="button" class="primary" id="startBtn">${translate(TEXT.start)}</button></div>
       </div>`;
-    $("startBtn").addEventListener("click", onStart);
+    byId("startBtn").addEventListener("click", onStart);
     onKey(k => { if (k === "Enter") { onStart(); return true; } return false; });
     board(key, { lower, fmt });
   }
@@ -531,20 +617,20 @@ const Brain = (() => {
     const dailyHref = next ? `../${next}/?daily` : "../trening/";
     main.innerHTML = `
       <div class="card result">
-        <div class="res-label">${t(label || S.result)}</div>
+        <div class="res-label">${translate(label || TEXT.result)}</div>
         <div class="big">${score === null ? "–" : fmt(score)}</div>
-        ${r.isBest && r.prev !== null ? `<div class="newbest">${t(S.newBest)}</div>` : ""}
-        <p class="statline">${r.best !== null ? t(S.best) + " <b>" + fmt(r.best) + "</b>" : ""}</p>
-        ${lines.length ? `<ul class="lines">${lines.map(l => `<li>${t(l)}</li>`).join("")}</ul>` : ""}
+        ${r.isBest && r.prev !== null ? `<div class="newbest">${translate(TEXT.newBest)}</div>` : ""}
+        <p class="statline">${r.best !== null ? translate(TEXT.best) + " <b>" + fmt(r.best) + "</b>" : ""}</p>
+        ${lines.length ? `<ul class="lines">${lines.map(l => `<li>${translate(l)}</li>`).join("")}</ul>` : ""}
         ${spark(r.hist, lower)}
         <div class="btnrow">
-          <button type="button" id="againBtn">${t(S.again)}</button>
-          ${extraBtn ? `<button type="button" id="extraBtn">${t(extraBtn.label)}</button>` : ""}
-          ${daily ? `<a class="btn primary" id="dailyBtn" href="${dailyHref}">${t(next ? S.nextDaily : S.dailyDone)}</a>` : ""}
+          <button type="button" id="againBtn">${translate(TEXT.again)}</button>
+          ${extraBtn ? `<button type="button" id="extraBtn">${translate(extraBtn.label)}</button>` : ""}
+          ${daily ? `<a class="btn primary" id="dailyBtn" href="${dailyHref}">${translate(next ? TEXT.nextDaily : TEXT.dailyDone)}</a>` : ""}
         </div>
       </div>`;
-    $("againBtn").addEventListener("click", onAgain);
-    if (extraBtn) $("extraBtn").addEventListener("click", extraBtn.onClick);
+    byId("againBtn").addEventListener("click", onAgain);
+    if (extraBtn) byId("extraBtn").addEventListener("click", extraBtn.onClick);
     onKey(k => {
       if (k !== "Enter") return false;
       if (daily) location.href = dailyHref; else onAgain();
@@ -554,12 +640,12 @@ const Brain = (() => {
   }
 
   // Tlačidlo „Ďalej" + Enter; vráti Promise, ktorý sa splní po stlačení.
-  function waitNext(parent, label = S.next) {
+  function waitNext(parent, label = TEXT.next) {
     return new Promise(res => {
       const row = document.createElement("div");
       row.className = "btnrow";
       const b = document.createElement("button");
-      b.type = "button"; b.className = "primary"; b.textContent = t(label);
+      b.type = "button"; b.className = "primary"; b.textContent = translate(label);
       let done = false;
       const go = () => { if (done) return; done = true; res(); };
       b.addEventListener("click", go);
@@ -654,9 +740,10 @@ const Brain = (() => {
   }
 
   return {
-    L, S, rnd, pick, shuffle, clamp, sleep, esc, load, save, gload, gsave, today, num, secs,
-    user, users, setUser, askUser, ensureUser, board, allBoards, cloudOn, cloud: CLOUD,
-    history, best, record, markDay, okTime, dailyPlan, inDaily, dailyFinish,
+    localized, randomInt, pick, shuffle, clamp, sleep, escapeHtml,
+    loadPlayer, savePlayer, loadShared, saveShared, today, formatNumber, formatSeconds,
+    user, users, setUser, askUser, ensureUser, board, loadBoards, cloudOn, cloud: CLOUD,
+    history, best, record, markDay, scoreWithTime, convertScores, dailyPlan, inDaily, dailyFinish,
     onKey, page, playing, choice, spark, intro, result, waitNext, numpad, countdown, stopwatch,
     get key() { return gameKey; },
   };

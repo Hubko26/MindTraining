@@ -38,7 +38,7 @@ test("tabuľka najlepších: pre každého hráča len jeho najlepší výsledok
   play("Ema", 10); play("Ema", 25); play("Ema", 12);
   play("Jano", 18); play("Jano", 30);
   play("Mia", 5);
-  assert.deepEqual({ ...B.gload("lb.k", {}) }, { Ema: 25, Jano: 30, Mia: 5 });
+  assert.deepEqual({ ...B.loadShared("lb.k", {}) }, { Ema: 25, Jano: 30, Mia: 5 });
   B.setUser("Ema");
   B.board("k");
   const rows = doc.querySelectorAll("#board .lb li");
@@ -46,8 +46,8 @@ test("tabuľka najlepších: pre každého hráča len jeho najlepší výsledok
   assert.ok(rows[1].classList.contains("me"), "aktuálny hráč je zvýraznený");
   // čas: menej je lepšie
   play("Ema", 30000, true, "t"); play("Ema", 25000, true, "t"); play("Jano", 27000, true, "t");
-  assert.deepEqual({ ...B.gload("lb.t", {}) }, { Ema: 25000, Jano: 27000 });
-  B.board("t", { lower: true, fmt: B.secs });
+  assert.deepEqual({ ...B.loadShared("lb.t", {}) }, { Ema: 25000, Jano: 27000 });
+  B.board("t", { lower: true, fmt: B.formatSeconds });
   assert.match(doc.querySelector("#board .lb li").textContent, /Ema.*25,0 s/);
   // osobné údaje sú oddelené
   B.setUser("Mia");
@@ -130,11 +130,11 @@ test("brain: record – história, rekord (aj menej = lepšie), denný tréning"
   B.record("t", 5000, true);
   assert.equal(B.record("t", 6000, true).isBest, false);
   assert.equal(B.record("t", 4000, true).isBest, true);
-  assert.equal(B.load("days", {})[B.today()], 6);
+  assert.equal(B.loadPlayer("days", {})[B.today()], 6);
   // denný plán: posledná hra zapíše splnený deň
-  B.save("daily", { date: B.today(), games: ["rychle"], done: [] });
+  B.savePlayer("daily", { date: B.today(), games: ["rychle"], done: [] });
   assert.equal(B.dailyFinish(), null);
-  assert.equal(B.load("dailyDone", {})[B.today()], true);
+  assert.equal(B.loadPlayer("dailyDone", {})[B.today()], true);
 });
 
 test("rýchle počty: príklady pre všetky operácie a úrovne sú správne a v rozsahu", () => {
@@ -533,7 +533,7 @@ test("spoločná tabuľka: správca (Hubko) maže riadky heslom, zmazané sa nev
   assert.equal(doc.getElementById("adminErr").textContent, "Nesprávne heslo.");
   doc.getElementById("adminCancel").click(); await settle();
   assert.equal(fs.docs.size, 2);
-  assert.equal(hub.Brain.gload("adminPass", ""), "");
+  assert.equal(hub.Brain.loadShared("adminPass", ""), "");
   // správne heslo → riadok zmizne zo servera aj z prehliadača
   delBtn("Hubko").click(); await settle();
   doc.getElementById("adminPass").value = "test-heslo";
@@ -542,7 +542,7 @@ test("spoločná tabuľka: správca (Hubko) maže riadky heslom, zmazané sa nev
   assert.deepEqual([...fs.docs.keys()], ["k%7CJano"]);
   assert.deepEqual(names(hub), ["Jano"]);
   assert.equal(hub.Brain.best("k"), null);
-  assert.deepEqual({ ...hub.Brain.gload("lb.k", {}) }, {});
+  assert.deepEqual({ ...hub.Brain.loadShared("lb.k", {}) }, {});
   // druhé mazanie už heslo nepýta; Jano svoj zmazaný výsledok znova nenahrá
   delBtn("Jano").click(); await settle();
   assert.equal(doc.querySelector(".usergate"), null);
@@ -563,25 +563,25 @@ test("násobilka: tabuľka podľa správnych, pri zhode podľa času; staré vý
     "brain.u.Ema.h.nasobilka.10": JSON.stringify([{ d: "2026-10-28", s: 18 }, { d: "2026-10-28", s: 20 }]),
     "brain.lb.nasobilka.10": JSON.stringify({ Ema: 20 }),
   } });
-  const { encode, decode, fmtScore, Brain: B } = ctx;
+  const { encode, decode, formatScore, Brain: B } = ctx;
   // viac správnych vyhráva aj s horším časom, pri zhode rozhoduje kratší čas
   assert.ok(encode(19, 300000) > encode(18, 20000));
   assert.ok(encode(18, 40000) > encode(18, 41000));
-  assert.deepEqual({ ...decode(encode(17, 52340)) }, { ok: 17, ms: 52300 });
-  assert.equal(fmtScore(encode(17, 52340)), "17/20 · 52,3 s");
+  assert.deepEqual({ ...decode(encode(17, 52340)) }, { correct: 17, ms: 52300 });
+  assert.equal(formatScore(encode(17, 52340)), "17/20 · 52,3 s");
   // starý formát (len počet správnych) – čas neznámy, horší než akýkoľvek nameraný
   assert.equal(B.best("nasobilka.10"), encode(20, 1e9) - 1);
-  assert.equal(fmtScore(B.best("nasobilka.10")), "20/20 · –");
+  assert.equal(formatScore(B.best("nasobilka.10")), "20/20 · –");
   assert.ok(encode(20, 600000) > B.best("nasobilka.10"));
   assert.ok(encode(19, 1000) < B.best("nasobilka.10"));
-  assert.deepEqual(B.history("nasobilka.10").map(h => decode(h.s).ok), [18, 20]);
+  assert.deepEqual(B.history("nasobilka.10").map(h => decode(h.s).correct), [18, 20]);
   // prevedený rekord zariadenia čaká na odoslanie na server
-  assert.equal(B.gload("lb.nasobilka.10", {}).Ema, B.best("nasobilka.10"));
-  assert.equal(B.gload("lbq", {})["nasobilka.10"].Ema, B.best("nasobilka.10"));
+  assert.equal(B.loadShared("lb.nasobilka.10", {}).Ema, B.best("nasobilka.10"));
+  assert.equal(B.loadShared("lbq", {})["nasobilka.10"].Ema, B.best("nasobilka.10"));
   B.setUser("Jano"); B.record("nasobilka.10", encode(18, 30000));
   B.setUser("Mia"); B.record("nasobilka.10", encode(18, 25000));
   B.setUser("Ema"); B.record("nasobilka.10", encode(20, 61000));
-  B.board("nasobilka.10", { fmt: fmtScore });
+  B.board("nasobilka.10", { fmt: formatScore });
   const rows = ctx.document.querySelectorAll("#board .lb li").map(li => li.querySelector(".n").textContent + " " + li.querySelector("b").textContent);
   assert.deepEqual(rows, ["Ema 20/20 · 61,0 s", "Mia 18/20 · 25,0 s", "Jano 18/20 · 30,0 s"]);
 });
@@ -607,8 +607,8 @@ test("spoločná tabuľka: všetky tabuľky naraz pre úvodnú stránku", async 
       return { ok: true, json: async () => [...fs.docs.values()].map(d => ({ document: { name: "x/scores/y", fields: d.fields } })) };
     return orig(url, o);
   };
-  const on = await ctx.Brain.allBoards({ a: false, b: false });
+  const on = await ctx.Brain.loadBoards({ a: false, b: false });
   assert.deepEqual(JSON.parse(JSON.stringify(on)), { a: { Ema: 6, Jano: 8 }, b: { Ema: 7, Jano: 3 } });
-  const off = await ctx.Brain.allBoards({ a: false, b: false }, { online: false });
+  const off = await ctx.Brain.loadBoards({ a: false, b: false }, { online: false });
   assert.deepEqual(JSON.parse(JSON.stringify(off)), { a: { Ema: 6, Stary: 99 }, b: { Ema: 7 } });
 });
