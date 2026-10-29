@@ -555,3 +555,33 @@ test("spoločná tabuľka: správca (Hubko) maže riadky heslom, zmazané sa nev
   assert.deepEqual(names(jano), ["Jano"]);
   assert.equal(fs.docs.get("k%7CJano").fields.s.integerValue, "12");
 });
+
+test("násobilka: tabuľka podľa správnych, pri zhode podľa času; staré výsledky sa prevedú", () => {
+  const ctx = load("nasobilka", { store: {
+    ...asUser("Ema"),
+    "brain.u.Ema.best.nasobilka.10": "20",
+    "brain.u.Ema.h.nasobilka.10": JSON.stringify([{ d: "2026-10-28", s: 18 }, { d: "2026-10-28", s: 20 }]),
+    "brain.lb.nasobilka.10": JSON.stringify({ Ema: 20 }),
+  } });
+  const { encode, decode, fmtScore, Brain: B } = ctx;
+  // viac správnych vyhráva aj s horším časom, pri zhode rozhoduje kratší čas
+  assert.ok(encode(19, 300000) > encode(18, 20000));
+  assert.ok(encode(18, 40000) > encode(18, 41000));
+  assert.deepEqual({ ...decode(encode(17, 52340)) }, { ok: 17, ms: 52300 });
+  assert.equal(fmtScore(encode(17, 52340)), "17/20 · 52,3 s");
+  // starý formát (len počet správnych) – čas neznámy, horší než akýkoľvek nameraný
+  assert.equal(B.best("nasobilka.10"), encode(20, 1e9) - 1);
+  assert.equal(fmtScore(B.best("nasobilka.10")), "20/20 · –");
+  assert.ok(encode(20, 600000) > B.best("nasobilka.10"));
+  assert.ok(encode(19, 1000) < B.best("nasobilka.10"));
+  assert.deepEqual(B.history("nasobilka.10").map(h => decode(h.s).ok), [18, 20]);
+  // prevedený rekord zariadenia čaká na odoslanie na server
+  assert.equal(B.gload("lb.nasobilka.10", {}).Ema, B.best("nasobilka.10"));
+  assert.equal(B.gload("lbq", {})["nasobilka.10"].Ema, B.best("nasobilka.10"));
+  B.setUser("Jano"); B.record("nasobilka.10", encode(18, 30000));
+  B.setUser("Mia"); B.record("nasobilka.10", encode(18, 25000));
+  B.setUser("Ema"); B.record("nasobilka.10", encode(20, 61000));
+  B.board("nasobilka.10", { fmt: fmtScore });
+  const rows = ctx.document.querySelectorAll("#board .lb li").map(li => li.querySelector(".n").textContent + " " + li.querySelector("b").textContent);
+  assert.deepEqual(rows, ["Ema 20/20 · 61,0 s", "Mia 18/20 · 25,0 s", "Jano 18/20 · 30,0 s"]);
+});

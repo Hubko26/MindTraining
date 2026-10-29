@@ -97,7 +97,7 @@ zobrazení tabuľky danej hry nahrajú raz.
 | 🎯 Odhad | `odhad/` | 10 úloh po 10 s, body podľa odchýlky (súčiny, √, %, kurz, súčet cien) |
 | 🏁 Dosiahni cieľ | `ciel/` | Z čísel a +−×÷ poskladaj cieľ; zadanie je vždy riešiteľné |
 | 🪄 Triky z hlavy | `triky/` | 10 trikov (×11, ×5, ×25, …5², blízko 100…), lekcia + 10 príkladov s nápovedou |
-| ✖️ Násobilka do 20 | `nasobilka/` | Leitnerove krabičky, mapa zvládnutých príkladov |
+| ✖️ Násobilka do 20 | `nasobilka/` | Leitnerove krabičky, mapa zvládnutých príkladov; tabuľka podľa správnych, pri zhode podľa celkového času kola |
 | ％ Percentá a úroky | `percenta/` | Zľava, DPH, zmena v %, spätná cena, pravidlo 72, zložené úročenie |
 | 🛑 Nestlač trojku | `sart/` | SART: chyby z autopilota, rozptyl reakcií, zrýchlenie pred chybou |
 | 🔍 Kontrolór | `kontrolor/` | Hárky výpočtov s 0–4 typickými chybami – nájdi ich |
