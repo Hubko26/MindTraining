@@ -41,6 +41,12 @@ a otvor http://localhost:5180
 rules_version = '2';
 service cloud.firestore {
   match /databases/{db}/documents {
+    // heslo správcu: nedá sa čítať, zapísať len správne a s časom tejto požiadavky
+    match /admin/{id} {
+      allow read: if false;
+      allow create, update: if id == 'del' && request.resource.data.keys().hasOnly(['p', 't'])
+        && request.resource.data.p == 'HESLO' && request.resource.data.t == request.time;
+    }
     match /scores/{id} {
       function valid() {
         let d = request.resource.data;
@@ -55,8 +61,8 @@ service cloud.firestore {
       allow update: if valid() && request.resource.data.lower == resource.data.lower
         && (resource.data.lower ? request.resource.data.s < resource.data.s
                                 : request.resource.data.s > resource.data.s);
-      // mazať smie len správca (UID z Authentication → Users)
-      allow delete: if request.auth != null && request.auth.uid == 'UID_SPRAVCU';
+      // mazať len v tej istej požiadavke, ktorá zapísala správne heslo do admin/del
+      allow delete: if getAfter(/databases/$(db)/documents/admin/del).data.t == request.time;
     }
   }
 }
@@ -65,13 +71,14 @@ service cloud.firestore {
 ### Mazanie riadkov (správca)
 
 Hráčovi s menom `CLOUD.admin` (v `shared/brain.js`, teraz „Hubko“) sa pri každom riadku tabuľky
-ukáže 🗑. Meno samo nič nechráni – mazanie povolia len pravidlá vyššie pre jeden účet:
+ukáže 🗑. Meno samo nič nechráni – mazanie povolia len pravidlá so správnym heslom.
+Heslo je **len v pravidlách vo Firebase konzole** (namiesto `HESLO` vyššie), nie v kóde.
 
-1. *Build → Authentication → Get started → Sign-in method → Email/Password* → zapnúť.
-2. *Authentication → Users → Add user* – e-mail a heslo správcu.
-3. Skopíruj jeho *User UID* do pravidiel namiesto `UID_SPRAVCU` a daj *Publish*.
+Aplikácia pošle jeden atomický zápis (`documents:commit`): heslo do dokumentu `admin/del`
+s časom servera a zmazanie riadkov. Pravidlá pustia zmazanie, len keď sa v tej istej
+požiadavke zapísalo správne heslo; `admin/del` sa čítať nedá. Pri prvom mazaní sa
+aplikácia spýta na heslo a zapamätá si ho v prehliadači (`brain.adminPass`).
 
-Pri prvom mazaní sa aplikácia spýta e-mail a heslo, prihlásenie si potom pamätá.
 Zmazaný riadok zmizne zo servera aj z prehliadača, kde sa mazalo (rekord a história tej hry),
 a zariadenia ho znova nenahrajú: staré lokálne rekordy sa posielajú len raz a nové výsledky
 idú cez frontu `brain.lbq`.

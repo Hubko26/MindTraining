@@ -11,12 +11,12 @@
 // Firebase Firestore (kolekcia scores, dokument { g: kľúč hry, n: meno, s: výsledok, lower }).
 //   brain.lbq                   – výsledky čakajúce na odoslanie: { kľúč: { meno: výsledok } }
 //   brain.lbsynced              – hry, ktorých staré lokálne rekordy sa už nahrali (len raz)
-//   brain.admin                 – prihlásenie správcu (Firebase Auth token), smie mazať riadky
+//   brain.adminPass             – heslo správcu na mazanie riadkov (overujú ho pravidlá Firestore)
 const Brain = (() => {
   // Firebase projekt pre spoločnú tabuľku (verejné údaje z firebaseConfig, nie tajomstvo).
   // Prázdne = tabuľka len v tomto prehliadači. Nastavenie: README → Spoločná tabuľka.
-  // admin = meno hráča, ktorému sa v tabuľke ukážu tlačidlá 🗑 (mazať smie len účet
-  // povolený v pravidlách Firestore, meno samo nič nechráni).
+  // admin = meno hráča, ktorému sa v tabuľke ukážu tlačidlá 🗑. Meno samo nič nechráni –
+  // mazanie povolia pravidlá Firestore len so správnym heslom (heslo je len v pravidlách).
   const CLOUD = { projectId: "mindtraining-8a94a", apiKey: "AIzaSyDuF1cY5_CKn2cn7IwnK16itdI4KaZ5hGc", admin: "Hubko" };
   const L = (sk, cs, en) => ({ sk, cs, en });
   const S = {
@@ -50,12 +50,11 @@ const Brain = (() => {
     del: L("Zmazať výsledok", "Smazat výsledek", "Delete result"),
     delAsk: L("Zmazať z tabuľky výsledok hráča", "Smazat z tabulky výsledek hráče", "Delete the leaderboard result of"),
     delFail: L("⚠️ Mazanie sa nepodarilo", "⚠️ Smazání se nepodařilo", "⚠️ Delete failed"),
-    adminTitle: L("🔑 Prihlásenie správcu", "🔑 Přihlášení správce", "🔑 Admin sign-in"),
-    adminWhy: L("Mazať výsledky smie len správca. Prihlásenie sa zapamätá v tomto prehliadači.", "Mazat výsledky smí jen správce. Přihlášení se zapamatuje v tomto prohlížeči.", "Only the admin can delete results. The sign-in is remembered in this browser."),
-    emailPh: L("E-mail", "E-mail", "Email"),
+    adminTitle: L("🔑 Heslo správcu", "🔑 Heslo správce", "🔑 Admin password"),
+    adminWhy: L("Mazať výsledky smie len správca. Heslo sa zapamätá v tomto prehliadači.", "Mazat výsledky smí jen správce. Heslo se zapamatuje v tomto prohlížeči.", "Only the admin can delete results. The password is remembered in this browser."),
     passPh: L("Heslo", "Heslo", "Password"),
-    login: L("Prihlásiť", "Přihlásit", "Sign in"),
-    loginBad: L("Prihlásenie sa nepodarilo", "Přihlášení se nepodařilo", "Sign-in failed"),
+    passOk: L("Zmazať", "Smazat", "Delete"),
+    passBad: L("Nesprávne heslo.", "Nesprávné heslo.", "Wrong password."),
   };
   const $ = id => document.getElementById(id);
   const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
@@ -219,7 +218,11 @@ const Brain = (() => {
         signal: ctl ? ctl.signal : undefined,
       });
       const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error((data.error && (data.error.message || data.error.status)) || "HTTP " + r.status);
+      if (!r.ok) {
+        const err = new Error((data.error && (data.error.message || data.error.status)) || "HTTP " + r.status);
+        err.status = data.error && data.error.status;
+        throw err;
+      }
       return data;
     } finally { if (timer) clearTimeout(timer); }
   }
@@ -288,22 +291,27 @@ const Brain = (() => {
     return { lb, docs };
   }
 
-  // ---- správca: mazanie riadkov (Firebase Auth, e-mail + heslo) ----
+  // ---- správca: mazanie riadkov heslom ----
+  // Jeden atomický zápis (commit): heslo do skrytého dokumentu admin/del s časom servera
+  // + zmazanie riadkov. Pravidlá povolia zmazanie, len keď sa v tej istej požiadavke
+  // zapísalo správne heslo (admin/del sa nedá čítať). Pravidlá: README → Mazanie riadkov.
   const isAdmin = () => cloudOn() && !!CLOUD.admin && user() === CLOUD.admin;
-  function keepToken(id, refresh, secs) { gsave("admin", { id, refresh, exp: Date.now() + Number(secs) * 1000 }); return id; }
-  // Platný token správcu; po vypršaní sa obnoví, inak sa otvorí prihlásenie (null = zrušené).
-  async function adminToken() {
-    const a = gload("admin", null);
-    if (a && a.exp > Date.now() + 60000) return a.id;
-    if (a && a.refresh) {
-      try {
-        const r = await req("https://securetoken.googleapis.com/v1/token", { form: { grant_type: "refresh_token", refresh_token: a.refresh } });
-        return keepToken(r.id_token, r.refresh_token, r.expires_in);
-      } catch (e) { gsave("admin", null); }
-    }
-    return adminLogin();
+  // meno dokumentu v tele požiadavky (nie v URL, preto bez kódovania)
+  const docPath = path => `projects/${CLOUD.projectId}/databases/(default)/documents/${path}`;
+  function cloudDelete(ids, pass) {
+    return fs(":commit", { body: { writes: [
+      { update: { name: docPath("admin/del"), fields: { p: { stringValue: pass } } },
+        updateTransforms: [{ fieldPath: "t", setToServerValue: "REQUEST_TIME" }] },
+      ...ids.map(id => ({ delete: docPath("scores/" + id) })),
+    ] } });
   }
-  function adminLogin() {
+  const denied = e => e.status === "PERMISSION_DENIED";
+  // Zmaže dokumenty s uloženým heslom; bez neho (alebo so zlým) sa naň spýta. false = zrušené.
+  async function deleteWithPass(ids) {
+    const saved = gload("adminPass", "");
+    if (saved) {
+      try { await cloudDelete(ids, saved); return true; } catch (e) { if (!denied(e)) throw e; gsave("adminPass", ""); }
+    }
     return new Promise(done => {
       gateOpen = true;
       const ov = document.createElement("div");
@@ -311,38 +319,34 @@ const Brain = (() => {
       ov.innerHTML = `
         <div class="card gate">
           <h2>${t(S.adminTitle)}</h2>
-          <input id="adminEmail" type="email" placeholder="${t(S.emailPh)}" autocomplete="username">
           <input id="adminPass" type="password" placeholder="${t(S.passPh)}" autocomplete="current-password">
           <p class="err" id="adminErr"></p>
           <p class="muted">${t(S.adminWhy)}</p>
           <div class="btnrow">
             <button type="button" id="adminCancel">${t(S.cancel)}</button>
-            <button type="button" class="primary" id="adminOk">${t(S.login)}</button>
+            <button type="button" class="primary" id="adminOk">${t(S.passOk)}</button>
           </div>
         </div>`;
       document.body.appendChild(ov);
       const close = v => { ov.remove(); gateOpen = false; done(v); };
       const go = async () => {
+        const pass = $("adminPass").value;
+        if (!pass) return;
         $("adminErr").textContent = "";
-        try {
-          const r = await req("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword",
-            { body: { email: $("adminEmail").value.trim(), password: $("adminPass").value, returnSecureToken: true } });
-          close(keepToken(r.idToken, r.refreshToken, r.expiresIn));
-        } catch (e) { $("adminErr").textContent = `${t(S.loginBad)} (${e.message})`; }
+        try { await cloudDelete(ids, pass); gsave("adminPass", pass); close(true); }
+        catch (e) { $("adminErr").textContent = denied(e) ? t(S.passBad) : `${t(S.delFail)} (${e.message})`; }
       };
       $("adminOk").addEventListener("click", go);
       $("adminPass").addEventListener("keydown", e => { if (e.key === "Enter") go(); });
-      $("adminCancel").addEventListener("click", () => close(null));
-      $("adminEmail").focus();
+      $("adminCancel").addEventListener("click", () => close(false));
+      $("adminPass").focus();
     });
   }
   // Zmaže riadok hráča zo servera aj z tohto zariadenia (tabuľka, rekord, história, fronta).
   async function deleteRow(key, name, ids) {
     if (!confirm(`${t(S.delAsk)} „${name}“?`)) return false;
-    const token = await adminToken();
-    if (!token) return false;
     // aj vlastné id – riadok mohol práve pribudnúť pri tejto synchronizácii
-    for (const id of new Set([...ids, docId(key, name)])) await fs("/scores/" + encodeURIComponent(id), { method: "DELETE", token });
+    if (!(await deleteWithPass([...new Set([...ids, docId(key, name)])]))) return false;
     const lb = gload("lb." + key, {});
     if (name in lb) { delete lb[name]; gsave("lb." + key, lb); }
     const q = gload("lbq", {});

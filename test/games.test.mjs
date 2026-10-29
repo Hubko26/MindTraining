@@ -429,17 +429,16 @@ test("denný tréning: plán je deterministický, jedna hra z každej skupiny", 
 function fakeFirestore() {
   const docs = new Map();
   const log = [];
-  const fetch = async (url, { method, body, headers }) => {
+  const fetch = async (url, { method, body }) => {
     log.push(`${method} ${url.split("?")[0].split("/").pop()}`);
-    if (url.includes("identitytoolkit")) {
-      const { email, password } = JSON.parse(body);
-      if (email === "admin@x.sk" && password === "tajne")
-        return { ok: true, json: async () => ({ idToken: "TOKEN", refreshToken: "R", expiresIn: "3600" }) };
-      return { ok: false, status: 400, json: async () => ({ error: { message: "INVALID_LOGIN_CREDENTIALS" } }) };
-    }
-    if (method === "DELETE") {
-      if (headers.Authorization !== "Bearer TOKEN") return { ok: false, status: 403, json: async () => ({ error: { message: "PERMISSION_DENIED" } }) };
-      docs.delete(decodeURIComponent(decodeURIComponent(url.split("/scores/")[1].split("?")[0])));
+    // :commit = heslo do admin/del + zmazania; pravidlá: zmazať len so správnym heslom
+    if (url.includes(":commit")) {
+      const [admin, ...dels] = JSON.parse(body).writes;
+      assert.match(admin.update.name, /^projects\/p\/databases\/\(default\)\/documents\/admin\/del$/);
+      assert.equal(admin.updateTransforms[0].setToServerValue, "REQUEST_TIME");
+      if (admin.update.fields.p.stringValue !== "test-heslo")
+        return { ok: false, status: 403, json: async () => ({ error: { message: "Missing or insufficient permissions.", status: "PERMISSION_DENIED" } }) };
+      for (const d of dels) docs.delete(d.delete.split("/scores/")[1]);
       return { ok: true, json: async () => ({}) };
     }
     const req = JSON.parse(body);
@@ -450,7 +449,7 @@ function fakeFirestore() {
       return { ok: true, json: async () => (rows.length ? rows : [{ readTime: "x" }]) };
     }
     assert.equal(method, "PATCH");
-    const id = decodeURIComponent(decodeURIComponent(url.split("/scores/")[1].split("?")[0]));
+    const id = decodeURIComponent(url.split("/scores/")[1].split("?")[0]);
     docs.set(id, { fields: req.fields });
     return { ok: true, json: async () => ({}) };
   };
@@ -487,7 +486,7 @@ test("spoločná tabuľka: výsledky z dvoch zariadení sa spoja cez Firestore",
   await settle(); await settle();
   assert.deepEqual(names(jano), ["Ema", "Jano"]);
   assert.equal(fs.docs.size, 2);
-  assert.equal(fs.docs.get("k|Ema").fields.s.integerValue, "40");
+  assert.equal(fs.docs.get("k%7CEma").fields.s.integerValue, "40");
 });
 
 test("spoločná tabuľka: bez spojenia ukáže lokálne výsledky", async () => {
@@ -508,7 +507,7 @@ test("tlačidlo späť v hlavičke: na zoznam hier, v dennom tréningu na tréni
   assert.match(b.textContent, /Hry/);
 });
 
-test("spoločná tabuľka: správca (Hubko) maže riadky po prihlásení, zmazané sa nevrátia", async () => {
+test("spoločná tabuľka: správca (Hubko) maže riadky heslom, zmazané sa nevrátia", async () => {
   const fs = fakeFirestore();
   const device = (name, store = {}) => {
     const ctx = load("schulte", { store: { ...asUser(name), ...store } });
@@ -526,27 +525,27 @@ test("spoločná tabuľka: správca (Hubko) maže riadky po prihlásení, zmazan
   const hub = device("Hubko", { "brain.lb.k": JSON.stringify({ Hubko: 99 }), "brain.u.Hubko.best.k": "99" });
   hub.Brain.board("k"); await settle();
   assert.deepEqual(names(hub), ["Hubko", "Jano"]);
-  const delBtn = n => hub.document.querySelectorAll("#board .del").find(b => b.dataset.n === n);
+  const doc = hub.document, delBtn = n => doc.querySelectorAll("#board .del").find(b => b.dataset.n === n);
   // zlé heslo → chyba, zrušenie → nič sa nezmaže
   delBtn("Hubko").click(); await settle();
-  hub.document.getElementById("adminEmail").value = "admin@x.sk";
-  hub.document.getElementById("adminPass").value = "zle";
-  hub.document.getElementById("adminOk").click(); await settle();
-  assert.match(hub.document.getElementById("adminErr").textContent, /INVALID_LOGIN_CREDENTIALS/);
-  hub.document.getElementById("adminCancel").click(); await settle();
+  doc.getElementById("adminPass").value = "zle";
+  doc.getElementById("adminOk").click(); await settle();
+  assert.equal(doc.getElementById("adminErr").textContent, "Nesprávne heslo.");
+  doc.getElementById("adminCancel").click(); await settle();
   assert.equal(fs.docs.size, 2);
+  assert.equal(hub.Brain.gload("adminPass", ""), "");
   // správne heslo → riadok zmizne zo servera aj z prehliadača
   delBtn("Hubko").click(); await settle();
-  hub.document.getElementById("adminEmail").value = "admin@x.sk";
-  hub.document.getElementById("adminPass").value = "tajne";
-  hub.document.getElementById("adminOk").click(); await settle();
-  assert.deepEqual([...fs.docs.keys()], ["k|Jano"]);
+  doc.getElementById("adminPass").value = "test-heslo";
+  doc.getElementById("adminOk").click(); await settle();
+  assert.equal(doc.querySelector(".usergate"), null);
+  assert.deepEqual([...fs.docs.keys()], ["k%7CJano"]);
   assert.deepEqual(names(hub), ["Jano"]);
   assert.equal(hub.Brain.best("k"), null);
   assert.deepEqual({ ...hub.Brain.gload("lb.k", {}) }, {});
-  // druhé mazanie už prihlásenie nepýta; Jano svoj zmazaný výsledok znova nenahrá
+  // druhé mazanie už heslo nepýta; Jano svoj zmazaný výsledok znova nenahrá
   delBtn("Jano").click(); await settle();
-  assert.equal(hub.document.querySelector(".usergate"), null);
+  assert.equal(doc.querySelector(".usergate"), null);
   assert.equal(fs.docs.size, 0);
   jano.Brain.board("k"); await settle();
   assert.equal(fs.docs.size, 0);
@@ -554,5 +553,5 @@ test("spoločná tabuľka: správca (Hubko) maže riadky po prihlásení, zmazan
   // nový výsledok sa normálne nahrá
   jano.Brain.record("k", 12); jano.Brain.board("k"); await settle();
   assert.deepEqual(names(jano), ["Jano"]);
-  assert.equal(fs.docs.get("k|Jano").fields.s.integerValue, "12");
+  assert.equal(fs.docs.get("k%7CJano").fields.s.integerValue, "12");
 });
