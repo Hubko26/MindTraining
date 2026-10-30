@@ -139,17 +139,41 @@ test("brain: record – história, rekord (aj menej = lepšie), denný tréning"
 
 test("rýchle počty: príklady pre všetky operácie a úrovne sú správne a v rozsahu", () => {
   const ctx = load("rychle", { random: seeded(2) });
-  for (const op of ["add", "sub", "mul", "div"]) {
-    for (let lv = 1; lv <= 10; lv++) {
+  for (const operation of ["add", "sub", "mul", "div"]) {
+    for (let level = 1; level <= 10; level++) {
       for (let i = 0; i < 30; i++) {
-        const q = ctx.gen(op, lv);
-        const exp = { add: q.a + q.b, sub: q.a - q.b, mul: q.a * q.b, div: q.a / q.b }[op];
-        assert.equal(q.ans, exp, `${op} L${lv}`);
-        assert.ok(Number.isInteger(q.ans) && q.ans >= 0, `${op} L${lv}: ${q.ans}`);
-        if (op === "add" || op === "sub") assert.ok(q.a <= ctx.ADD_MAX[lv - 1] && q.b <= ctx.ADD_MAX[lv - 1]);
+        const problem = ctx.generateProblem(operation, level);
+        const expected = { add: problem.a + problem.b, sub: problem.a - problem.b, mul: problem.a * problem.b, div: problem.a / problem.b }[operation];
+        assert.equal(problem.answer, expected, `${operation} L${level}`);
+        assert.ok(Number.isInteger(problem.answer) && problem.answer >= 0, `${operation} L${level}: ${problem.answer}`);
+        if (operation === "add" || operation === "sub") {
+          assert.ok(problem.a <= ctx.ADDITION_MAX[level - 1] && problem.b <= ctx.ADDITION_MAX[level - 1]);
+        }
       }
     }
   }
+});
+
+test("rýchle počty: obtiažnosť rastie so sériou, chyba vráti úroveň 1, každá hra začína ľahko", async () => {
+  const ctx = load("rychle", { random: seeded(4), store: { ...asUser("Ema"), "brain.u.Ema.lv.rychle": JSON.stringify({ add: 9, sub: 9, mul: 9, div: 9 }) } });
+  assert.deepEqual([0, 2, 3, 5, 6, 26, 27, 100].map(ctx.levelForStreak), [1, 1, 2, 2, 3, 9, 10, 10]);
+  const doc = ctx.document;
+  doc.getElementById("startBtn").click();
+  const level = () => doc.getElementById("level").textContent;
+  const press = key => doc.querySelectorAll(".numpad button").find(b => b.dataset.k === key).click();
+  const currentAnswer = () => {
+    const [a, symbol, b] = doc.getElementById("q").textContent.replace(/\s(?=\d{3}\b)/g, "").split(" ");
+    const x = Number(a), y = Number(b);
+    return { "+": x + y, "−": x - y, "×": x * y, "÷": x / y }[symbol];
+  };
+  const type = number => { for (const digit of String(number)) press(digit); };
+  const answerCurrent = () => type(currentAnswer());
+  assert.equal(level(), "Úroveň 1", "staré uložené úrovne sa nepoužijú");
+  for (let i = 0; i < 6; i++) answerCurrent();
+  assert.equal(level(), "Úroveň 3");
+  type(currentAnswer() + 1); press("OK");
+  await new Promise(r => setTimeout(r, 1000));
+  assert.equal(level(), "Úroveň 1", "chyba vráti úroveň 1");
 });
 
 test("rýchle počty: hra – správna odpoveď sa prijme sama, po 60 s výsledok", async () => {

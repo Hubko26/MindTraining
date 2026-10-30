@@ -93,7 +93,7 @@ zobrazení tabuľky danej hry nahrajú raz.
 | Hra | Priečinok | Popis |
 |---|---|---|
 | 🔥 Denný tréning | `trening/` | 3 hry denne (počty, pamäť, pozornosť) podľa dátumu, séria dní, kalendár |
-| ⚡ Rýchle počty | `rychle/` | 60 s, +−×÷, adaptívna úroveň 1–10 pre každú operáciu; režim Presnosť = bez času, OK, prvá chyba končí |
+| ⚡ Rýchle počty | `rychle/` | 60 s, +−×÷; obtiažnosť rastie so sériou (každé 3 správne za sebou = úroveň vyššie, 1–10, chyba = späť na 1), každá hra začína ľahko; režim Presnosť = bez času, OK, prvá chyba končí |
 | 🔗 Reťazové počty | `retaz/` | Operácie sa ukazujú postupne, zadáš len výsledok; dĺžka 3–15 sa prispôsobuje |
 | 🎯 Odhad | `odhad/` | 10 úloh po 10 s, body podľa odchýlky (súčiny, √, %, kurz, súčet cien) |
 | 🏁 Dosiahni cieľ | `ciel/` | Z čísel a +−×÷ poskladaj cieľ; zadanie je vždy riešiteľné |
